@@ -1,0 +1,38 @@
+name: PR Title Convention
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  pr-title-check:
+    name: Validate PR title format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate title pattern
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "PR title: $PR_TITLE"
+
+          release_pattern='^chore\([^)]+\): release [0-9]+\.[0-9]+\.[0-9]+$'
+          feature_pattern='^(feat|fix|docs|test|refactor|chore)\(rps-[0-9]+\)!?: .+$'
+
+          if [[ "$PR_TITLE" =~ $release_pattern ]]; then
+            echo "Release PR title detected and allowed."
+            exit 0
+          fi
+
+          if [[ "$PR_TITLE" =~ $feature_pattern ]]; then
+            echo "PR title is valid."
+            exit 0
+          fi
+
+          echo "Invalid PR title format."
+          echo "Expected contributor format: type(rps-<number>): subject"
+          echo "Example: docs(rps-4): update contribution guide"
+          echo "Breaking change example: feat(rps-21)!: rename client API"
+          exit 1

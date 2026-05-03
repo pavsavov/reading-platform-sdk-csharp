@@ -1,0 +1,42 @@
+name: Publish NuGet
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ./PublishingPlatform.SDK.sln
+
+      - name: Build
+        run: dotnet build ./PublishingPlatform.SDK.sln --configuration Release --no-restore
+
+      - name: Pack
+        run: dotnet pack ./src/PublishingPlatform.SDK/PublishingPlatform.SDK.csproj --configuration Release --no-build --output ./artifacts
+
+      - name: Validate NuGet API key is configured
+        if: ${{ env.NUGET_API_KEY == '' }}
+        run: |
+          echo "NUGET_API_KEY is required for publishing packages." >&2
+          exit 1
+
+      - name: Publish package to NuGet.org
+        run: dotnet nuget push "./artifacts/*.nupkg" --source "https://api.nuget.org/v3/index.json" --api-key "${{ env.NUGET_API_KEY }}" --skip-duplicate

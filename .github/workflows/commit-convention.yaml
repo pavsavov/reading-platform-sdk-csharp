@@ -1,0 +1,31 @@
+name: Commit Convention
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  commitlint:
+    name: Conventional commit validation (grace period)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Grace-period notice
+        run: |
+          echo "Commit ticket lint is currently warning-only."
+          echo "Hard enforcement starts on 2026-05-17."
+          echo "Required format: RPS-123 docs: short description"
+
+      - name: Validate commit messages
+        uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed # v6.2.1
+        with:
+          configFile: ./commitlint.config.mjs
+          failOnWarnings: false
+          failOnErrors: false
+          helpURL: https://github.com/conventional-changelog/commitlint/#what-is-commitlint
