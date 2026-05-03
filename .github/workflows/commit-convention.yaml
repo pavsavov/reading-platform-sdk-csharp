@@ -10,11 +10,22 @@ permissions:
 
 jobs:
   commitlint:
-    name: Conventional commit validation
+    name: Conventional commit validation (grace period)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Grace-period notice
+        run: |
+          echo "Commit ticket lint is currently warning-only."
+          echo "Hard enforcement starts on 2026-05-17."
+          echo "Required format: RPS-123 docs: short description"
+
       - name: Validate commit messages
         uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: ./commitlint.config.mjs
+          failOnWarnings: false
+          failOnErrors: false
+          helpURL: https://github.com/conventional-changelog/commitlint/#what-is-commitlint

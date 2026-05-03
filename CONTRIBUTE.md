@@ -26,11 +26,13 @@ Do not manually:
 
 ## Commit convention (required)
 
-This repository uses Conventional Commits.
+This repository requires ticket-prefixed commit messages.
 
-Use:
+Use this commit format:
 
-- `type: short description`
+- `RPS-<number> type: short description`
+- optional scope: `RPS-<number> type(scope): short description`
+- optional breaking marker: `RPS-<number> type(scope)!: short description`
 
 Supported types:
 
@@ -44,10 +46,31 @@ Supported types:
 
 Examples:
 
-- `feat: add issue analytics`
-- `fix: handle null API response`
-- `feat!: rename PublishingPlatformClient`
-- `docs: update README examples`
+- `RPS-4 docs: update README examples`
+- `RPS-21 feat!: rename PublishingPlatformClient`
+- `RPS-8 fix(api): handle null API response`
+- `RPS-11 chore(ci): adjust workflow permissions`
+
+These will fail:
+
+- `docs: update README examples` (missing ticket)
+- `RPS-4 update README examples` (missing type and colon)
+
+Release automation commits are exempt from this rule:
+
+- `chore(main): release X.Y.Z`
+
+## PR title convention (required)
+
+To preserve Release Please bump detection, PR titles must use conventional format with ticket scope:
+
+- `type(rps-<number>): short description`
+- breaking changes: `type(rps-<number>)!: short description`
+
+Examples:
+
+- `feat(rps-4): add release workflow`
+- `docs(rps-21): update contribution guide`
 
 ## Versioning and changelog
 
@@ -86,6 +109,7 @@ CI/CD validates:
 - static analysis (Sonar when token is configured)
 - documentation presence (`README.md`, `CHANGELOG.md`)
 - commit convention on pull requests
+- PR title convention on pull requests
 
 CI/CD automates:
 
@@ -101,6 +125,11 @@ CI/CD does not:
 - merge pull requests
 - bypass maintainer approval
 
+## Enforcement timeline
+
+- Grace period (warning only): until `2026-05-17`
+- Hard enforcement (failing checks): starts on `2026-05-17`
+
 ## Required repository secrets
 
 Configure these secrets in GitHub Actions:
@@ -113,4 +142,6 @@ Configure these secrets in GitHub Actions:
 
 - Keep branch protection enabled on `main`.
 - Require CI checks before merge.
-- Prefer squash-merge with conventional PR titles so release classification stays clean.
+- Require squash merge.
+- Enable "Default to PR title for squash merge commits."
+- Keep PR titles conventional so release classification stays clean.
