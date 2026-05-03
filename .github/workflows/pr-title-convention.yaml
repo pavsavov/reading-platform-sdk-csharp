@@ -19,7 +19,7 @@ jobs:
           echo "PR title: $PR_TITLE"
 
           release_pattern='^chore\([^)]+\): release [0-9]+\.[0-9]+\.[0-9]+$'
-          feature_pattern='^(feat|fix|docs|test|refactor|chore)\(rps-[0-9]+\)!?: .+$'
+          feature_pattern='^RPS-[0-9]+ (feat|fix|docs|test|refactor|chore)(\([a-z0-9-]+\))?!?: .+$'
 
           if [[ "$PR_TITLE" =~ $release_pattern ]]; then
             echo "Release PR title detected and allowed."
@@ -32,7 +32,7 @@ jobs:
           fi
 
           echo "Invalid PR title format."
-          echo "Expected contributor format: type(rps-<number>): subject"
-          echo "Example: docs(rps-4): update contribution guide"
-          echo "Breaking change example: feat(rps-21)!: rename client API"
+          echo "Expected contributor format: RPS-<number> type: subject"
+          echo "Example: RPS-4 docs: update contribution guide"
+          echo "Breaking change example: RPS-21 feat!: rename client API"
           exit 1
