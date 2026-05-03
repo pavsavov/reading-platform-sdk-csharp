@@ -43,5 +43,6 @@ jobs:
         shell: powershell
         run: |
           ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"pavsavov_reading-platform-sdk-csharp" /o:"pavsavov" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          dotnet build
+          dotnet restore .\PublishingPlatform.SDK.sln
+          dotnet build .\PublishingPlatform.SDK.sln --no-restore
           ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
