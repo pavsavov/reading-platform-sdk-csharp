@@ -12,6 +12,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      NUGET_USER: ${{ secrets.NUGET_USER }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -25,7 +27,7 @@ jobs:
         id: login
         uses: NuGet/login@ebc737b6fc418a6ca0073cf116ec8dc156d8b81e # v1
         with:
-          user: ${{ secrets.NUGET_USER }}
+          user: ${{ env.NUGET_USER }}
 
       - name: Restore
         run: dotnet restore ./PublishingPlatform.SDK.sln
@@ -37,7 +39,7 @@ jobs:
         run: dotnet pack ./src/PublishingPlatform.SDK/PublishingPlatform.SDK.csproj --configuration Release --no-build --output ./artifacts
 
       - name: Validate NuGet user is configured
-        if: ${{ secrets.NUGET_USER == '' }}
+        if: ${{ env.NUGET_USER == '' }}
         run: |
           echo "NUGET_USER is required for trusted publishing." >&2
           exit 1
