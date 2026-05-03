@@ -4,24 +4,28 @@ on:
   push:
     tags:
       - "v*.*.*"
-  workflow_dispatch:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Set up .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
+
+      - name: NuGet login (OIDC)
+        id: login
+        uses: NuGet/login@ebc737b6fc418a6ca0073cf116ec8dc156d8b81e # v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
 
       - name: Restore
         run: dotnet restore ./PublishingPlatform.SDK.sln
@@ -32,11 +36,11 @@ jobs:
       - name: Pack
         run: dotnet pack ./src/PublishingPlatform.SDK/PublishingPlatform.SDK.csproj --configuration Release --no-build --output ./artifacts
 
-      - name: Validate NuGet API key is configured
-        if: ${{ env.NUGET_API_KEY == '' }}
+      - name: Validate NuGet user is configured
+        if: ${{ secrets.NUGET_USER == '' }}
         run: |
-          echo "NUGET_API_KEY is required for publishing packages." >&2
+          echo "NUGET_USER is required for trusted publishing." >&2
           exit 1
 
       - name: Publish package to NuGet.org
-        run: dotnet nuget push "./artifacts/*.nupkg" --source "https://api.nuget.org/v3/index.json" --api-key "${{ env.NUGET_API_KEY }}" --skip-duplicate
+        run: dotnet nuget push "./artifacts/*.nupkg" --source "https://api.nuget.org/v3/index.json" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --skip-duplicate
