@@ -62,15 +62,16 @@ Release automation commits are exempt from this rule:
 
 ## PR title convention (required)
 
-To preserve Release Please bump detection, PR titles must use conventional format with ticket scope:
+PR titles must use ticket-first format:
 
-- `type(rps-<number>): short description`
-- breaking changes: `type(rps-<number>)!: short description`
+- `RPS-<number> type: short description`
+- optional scope: `RPS-<number> type(scope): short description`
+- breaking changes: `RPS-<number> type!: short description`
 
 Examples:
 
-- `feat(rps-4): add release workflow`
-- `docs(rps-21): update contribution guide`
+- `RPS-4 feat: add release workflow`
+- `RPS-21 docs: update contribution guide`
 
 ## Versioning and changelog
 
@@ -144,4 +145,4 @@ Configure these secrets in GitHub Actions:
 - Require CI checks before merge.
 - Require squash merge.
 - Enable "Default to PR title for squash merge commits."
-- Keep PR titles conventional so release classification stays clean.
+- Keep PR titles in `RPS-<number> type: ...` format.
