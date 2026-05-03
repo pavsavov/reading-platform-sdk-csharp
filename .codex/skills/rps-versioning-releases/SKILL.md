@@ -54,7 +54,7 @@ If uncertain, classify as breaking and call it out explicitly.
 
 ## Commit Message Convention
 
-Use repository-specific ticket-first commit format.
+Use repository-specific ticketed commit format for contributor commits.
 
 Format:
 
@@ -76,6 +76,14 @@ Breaking change notation:
 - `RPS-21 feat!: change API contract`
 - or include:
   - `BREAKING CHANGE: <details>`
+
+## PR Title Convention
+
+Use repository ticket-first PR title format:
+
+- `RPS-<number> type: short description`
+- optional scope: `RPS-<number> type(scope): short description`
+- breaking: `RPS-<number> type!: short description`
 
 ## Changelog Policy
 
@@ -106,8 +114,7 @@ Additional rules:
 
 Release flow is hybrid: manual code review + automated release mechanics.
 
-1. Developer opens PR with conventional commits or a conventional PR title.
-1. Developer opens PR using repository commit and PR title format with ticket prefix.
+1. Developer opens PR with ticketed commits and ticket-first PR title.
 2. Maintainer reviews and merges PR to `main`.
 3. Release Please analyzes merged commits and opens/updates release PR.
 4. Release PR updates:
