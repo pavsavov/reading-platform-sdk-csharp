@@ -1,0 +1,14 @@
+using PublishingPlatform.SDK.Abstractions;
+
+namespace PublishingPlatform.SDK.Infrastructure.Transport.Errors;
+
+internal interface ITransportErrorContextFactory
+{
+    PublishingPlatformErrorContext Create(
+        HttpMethod method,
+        string relativePath,
+        int statusCode,
+        string message,
+        string correlationId,
+        string? operationName);
+}

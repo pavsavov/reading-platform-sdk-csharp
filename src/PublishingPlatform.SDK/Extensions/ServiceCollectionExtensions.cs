@@ -4,6 +4,7 @@ using PublishingPlatform.SDK.Exceptions;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients;
 using PublishingPlatform.SDK.Infrastructure.Errors;
+using PublishingPlatform.SDK.Infrastructure.Http.Handlers;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal.Resilience;
 using PublishingPlatform.SDK.Options;
@@ -75,13 +76,19 @@ public static class ServiceCollectionExtensions
             return options.ErrorMapper ?? new DefaultPublishingPlatformErrorMapper();
         });
         services.AddSingleton<ICorrelationIdProvider, GuidCorrelationIdProvider>();
+        services.AddSingleton<HttpPipelinePolicy>();
         services.AddSingleton<ISharedHttpTransport>(sp =>
         {
             var httpClient = SdkHttpClientResolver.Resolve(sp);
             var pipeline = sp.GetRequiredService<IPublishingPlatformResiliencePipeline>();
             var correlationProvider = sp.GetRequiredService<ICorrelationIdProvider>();
             var errorMapper = sp.GetRequiredService<IPublishingPlatformErrorMapper>();
-            return new SharedHttpTransport(httpClient, pipeline, correlationProvider, errorMapper);
+            return SharedHttpTransportBuilder.Create()
+                .WithHttpClient(httpClient)
+                .WithResiliencePipeline(pipeline)
+                .WithCorrelationProvider(correlationProvider)
+                .WithErrorMapper(errorMapper)
+                .Build();
         });
 
         services.AddSingleton<IBooksClient>(sp => new BooksClient(sp.GetRequiredService<ISharedHttpTransport>()));
