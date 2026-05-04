@@ -22,6 +22,7 @@ Use this skill when implementing or refactoring production SDK code, public abst
 
 - Follow SonarCloud default C# rules as the baseline quality standard.
 - Authoritative rules reference: https://sonarcloud.io/organizations/pavsavov/rules?languages=cs
+- Explicitly enforce `roslyn:CA1822` ("Mark members as static") when members do not access instance state.
 - Target `.NET 10` or higher for all new implementation work unless explicitly overridden by the user.
 - Code must be clean and maintainable:
   - intention-revealing names

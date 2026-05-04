@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.Http.Resilience;
 using Polly;
+using Polly.Retry;
 using Polly.CircuitBreaker;
 using Polly.Timeout;
 using PublishingPlatform.SDK.Abstractions;
@@ -35,15 +36,7 @@ internal static class ResiliencePipelineFactory
                 Delay = options.Retry.BaseDelay,
                 BackoffType = DelayBackoffType.Exponential,
                 UseJitter = true,
-                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-                    .Handle<HttpRequestException>()
-                    .Handle<TimeoutRejectedException>()
-                    .Handle<BrokenCircuitException>()
-                    .HandleResult(response => response.StatusCode is
-                        HttpStatusCode.TooManyRequests or
-                        HttpStatusCode.ServiceUnavailable or
-                        HttpStatusCode.BadGateway or
-                        HttpStatusCode.GatewayTimeout),
+                ShouldHandle = args => new ValueTask<bool>(ShouldRetry(args, options.Retry.RetryNonIdempotentMethods)),
             });
         }
 
@@ -67,6 +60,79 @@ internal static class ResiliencePipelineFactory
         }
 
         return new DefaultPublishingPlatformResiliencePipeline(builder.Build());
+    }
+
+    private static bool ShouldRetry(RetryPredicateArguments<HttpResponseMessage> args, bool retryNonIdempotentMethods)
+    {
+        if (args.Outcome.Exception is HttpRequestException or TimeoutRejectedException or BrokenCircuitException)
+        {
+            return IsMethodAllowed(args.Context, retryNonIdempotentMethods);
+        }
+
+        if (args.Outcome.Result is null)
+        {
+            return false;
+        }
+
+        if (!DefaultPublishingPlatformResiliencePipeline.TryGetHttpMethod(args.Context, out var method))
+        {
+            return false;
+        }
+
+        if (!IsMethodAllowed(method, retryNonIdempotentMethods))
+        {
+            return false;
+        }
+
+        return IsTransientStatusCode(args.Outcome.Result.StatusCode, IsNonIdempotentRetryCandidate(method));
+    }
+
+    private static bool IsMethodAllowed(ResilienceContext context, bool retryNonIdempotentMethods)
+    {
+        if (!DefaultPublishingPlatformResiliencePipeline.TryGetHttpMethod(context, out var method))
+        {
+            return false;
+        }
+
+        return IsMethodAllowed(method, retryNonIdempotentMethods);
+    }
+
+    private static bool IsMethodAllowed(HttpMethod method, bool retryNonIdempotentMethods)
+    {
+        if (IsIdempotentMethod(method))
+        {
+            return true;
+        }
+
+        return retryNonIdempotentMethods && IsNonIdempotentRetryCandidate(method);
+    }
+
+    private static bool IsIdempotentMethod(HttpMethod method)
+    {
+        return method == HttpMethod.Get
+            || method == HttpMethod.Put
+            || method == HttpMethod.Delete
+            || method == HttpMethod.Head
+            || method == HttpMethod.Options
+            || method.Method.Equals("TRACE", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsNonIdempotentRetryCandidate(HttpMethod method)
+    {
+        return method == HttpMethod.Post || method == HttpMethod.Patch;
+    }
+
+    private static bool IsTransientStatusCode(HttpStatusCode statusCode, bool isNonIdempotentMethod)
+    {
+        if (isNonIdempotentMethod)
+        {
+            return statusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable;
+        }
+
+        return statusCode is HttpStatusCode.TooManyRequests
+            or HttpStatusCode.BadGateway
+            or HttpStatusCode.ServiceUnavailable
+            or HttpStatusCode.GatewayTimeout;
     }
 
     private static void Validate(PublishingPlatformResilienceOptions options)

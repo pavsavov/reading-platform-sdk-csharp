@@ -14,7 +14,8 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
         {
             Enabled = true,
             MaxRetryAttempts = 3,
-            BaseDelay = TimeSpan.FromMilliseconds(200)
+            BaseDelay = TimeSpan.FromMilliseconds(200),
+            RetryNonIdempotentMethods = false
         }
     }
 }).Build();

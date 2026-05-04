@@ -7,4 +7,6 @@ public sealed class RetryResilienceOptions
     public int MaxRetryAttempts { get; set; } = 3;
 
     public TimeSpan BaseDelay { get; set; } = TimeSpan.FromMilliseconds(500);
+
+    public bool RetryNonIdempotentMethods { get; set; }
 }

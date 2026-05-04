@@ -8,6 +8,7 @@ using PublishingPlatform.SDK.Infrastructure.Errors;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal.Resilience;
 using PublishingPlatform.SDK.Options;
+using System.Net;
 using System.Net.Http.Json;
 
 namespace PublishingPlatform.SDK.Tests.Infrastructure;
@@ -90,11 +91,13 @@ public sealed class ResilienceAndTransportTests
     {
         var tokenSource = new CancellationTokenSource();
         var capturedToken = CancellationToken.None;
+        PublishingPlatformResilienceContext? capturedContext = null;
 
         var pipeline = Substitute.For<IPublishingPlatformResiliencePipeline>();
-        pipeline.ExecuteAsync(Arg.Any<Func<CancellationToken, Task<HttpResponseMessage>>>(), Arg.Any<CancellationToken>())
+        pipeline.ExecuteAsync(Arg.Any<PublishingPlatformResilienceContext>(), Arg.Any<Func<CancellationToken, Task<HttpResponseMessage>>>(), Arg.Any<CancellationToken>())
             .Returns(callInfo =>
             {
+                capturedContext = callInfo.Arg<PublishingPlatformResilienceContext>();
                 capturedToken = callInfo.Arg<CancellationToken>();
                 var operation = callInfo.Arg<Func<CancellationToken, Task<HttpResponseMessage>>>();
                 return operation(capturedToken);
@@ -107,6 +110,8 @@ public sealed class ResilienceAndTransportTests
         await transport.SendAsync(HttpMethod.Get, "/books", null, tokenSource.Token);
 
         capturedToken.Should().Be(tokenSource.Token);
+        capturedContext.Should().NotBeNull();
+        capturedContext!.Method.Should().Be(HttpMethod.Get);
     }
 
     [Fact]
@@ -312,6 +317,232 @@ public sealed class ResilienceAndTransportTests
             .WithMessage("*BaseDelay*");
     }
 
+    [Fact]
+    public async Task CreatePipeline_RetriesTransientStatusCodes_ForIdempotentMethod()
+    {
+        var options = new PublishingPlatformResilienceOptions
+        {
+            Enabled = true,
+            Retry = new RetryResilienceOptions
+            {
+                Enabled = true,
+                MaxRetryAttempts = 2,
+                BaseDelay = TimeSpan.FromMilliseconds(1),
+            },
+        };
+
+        var pipeline = ResiliencePipelineFactory.Create(options);
+        var attempts = 0;
+
+        var response = await pipeline.ExecuteAsync(
+            new PublishingPlatformResilienceContext { Method = HttpMethod.Get },
+            _ =>
+            {
+                attempts++;
+                return Task.FromResult(new HttpResponseMessage(
+                    attempts < 3 ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK));
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        attempts.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task CreatePipeline_DoesNotRetryTransientStatusCodes_ForPostByDefault()
+    {
+        var options = new PublishingPlatformResilienceOptions
+        {
+            Enabled = true,
+            Retry = new RetryResilienceOptions
+            {
+                Enabled = true,
+                MaxRetryAttempts = 2,
+                BaseDelay = TimeSpan.FromMilliseconds(1),
+            },
+        };
+
+        var pipeline = ResiliencePipelineFactory.Create(options);
+        var attempts = 0;
+
+        var response = await pipeline.ExecuteAsync(
+            new PublishingPlatformResilienceContext { Method = HttpMethod.Post },
+            _ =>
+            {
+                attempts++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CreatePipeline_RetriesTransientStatusCodes_ForPostWhenEnabled()
+    {
+        var options = new PublishingPlatformResilienceOptions
+        {
+            Enabled = true,
+            Retry = new RetryResilienceOptions
+            {
+                Enabled = true,
+                RetryNonIdempotentMethods = true,
+                MaxRetryAttempts = 2,
+                BaseDelay = TimeSpan.FromMilliseconds(1),
+            },
+        };
+
+        var pipeline = ResiliencePipelineFactory.Create(options);
+        var attempts = 0;
+
+        var response = await pipeline.ExecuteAsync(
+            new PublishingPlatformResilienceContext { Method = HttpMethod.Post },
+            _ =>
+            {
+                attempts++;
+                return Task.FromResult(new HttpResponseMessage(
+                    attempts < 3 ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK));
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        attempts.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task CreatePipeline_DoesNotRetryNonTransientStatusCodes_ForIdempotentMethod()
+    {
+        var options = new PublishingPlatformResilienceOptions
+        {
+            Enabled = true,
+            Retry = new RetryResilienceOptions
+            {
+                Enabled = true,
+                MaxRetryAttempts = 2,
+                BaseDelay = TimeSpan.FromMilliseconds(1),
+            },
+        };
+
+        var pipeline = ResiliencePipelineFactory.Create(options);
+        var attempts = 0;
+
+        var response = await pipeline.ExecuteAsync(
+            new PublishingPlatformResilienceContext { Method = HttpMethod.Get },
+            _ =>
+            {
+                attempts++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest));
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CreatePipeline_DoesNotRetryBadGateway_ForPostWhenEnabled()
+    {
+        var options = new PublishingPlatformResilienceOptions
+        {
+            Enabled = true,
+            Retry = new RetryResilienceOptions
+            {
+                Enabled = true,
+                RetryNonIdempotentMethods = true,
+                MaxRetryAttempts = 2,
+                BaseDelay = TimeSpan.FromMilliseconds(1),
+            },
+        };
+
+        var pipeline = ResiliencePipelineFactory.Create(options);
+        var attempts = 0;
+
+        var response = await pipeline.ExecuteAsync(
+            new PublishingPlatformResilienceContext { Method = HttpMethod.Post },
+            _ =>
+            {
+                attempts++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadGateway));
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadGateway);
+        attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SendAsync_RetriesBeforeErrorMapping_WhenPipelineRetries()
+    {
+        var options = new PublishingPlatformResilienceOptions
+        {
+            Enabled = true,
+            Retry = new RetryResilienceOptions
+            {
+                Enabled = true,
+                MaxRetryAttempts = 2,
+                BaseDelay = TimeSpan.FromMilliseconds(1),
+            },
+        };
+
+        var attempts = 0;
+        using var handler = new RecordingHandler((_, _) =>
+        {
+            attempts++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = JsonContent.Create(new { Message = "busy" }),
+            });
+        });
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var mapper = Substitute.For<IPublishingPlatformErrorMapper>();
+        mapper.Map(Arg.Any<PublishingPlatformErrorContext>()).Returns(new InvalidOperationException("mapped"));
+        var transport = new SharedHttpTransport(
+            httpClient,
+            ResiliencePipelineFactory.Create(options),
+            new FixedCorrelationIdProvider(Faker.Random.Guid().ToString("N")),
+            mapper);
+
+        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books", null);
+
+        _ = await act.Should().ThrowAsync<InvalidOperationException>();
+        attempts.Should().Be(3);
+        mapper.Received(1).Map(Arg.Any<PublishingPlatformErrorContext>());
+    }
+
+    [Fact]
+    public async Task SendAsync_UsesStableCorrelationIdAcrossRetries()
+    {
+        var options = new PublishingPlatformResilienceOptions
+        {
+            Enabled = true,
+            Retry = new RetryResilienceOptions
+            {
+                Enabled = true,
+                MaxRetryAttempts = 2,
+                BaseDelay = TimeSpan.FromMilliseconds(1),
+            },
+        };
+
+        var observedCorrelationIds = new List<string>();
+        using var handler = new RecordingHandler((request, _) =>
+        {
+            request.Headers.TryGetValues(SharedHttpTransport.CorrelationHeaderName, out var values).Should().BeTrue();
+            observedCorrelationIds.Add(values!.Single());
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = JsonContent.Create(new { Message = "busy" }),
+            });
+        });
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = new SharedHttpTransport(
+            httpClient,
+            ResiliencePipelineFactory.Create(options),
+            new FixedCorrelationIdProvider("fixed-correlation-id"),
+            new DefaultPublishingPlatformErrorMapper());
+
+        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books", null);
+
+        _ = await act.Should().ThrowAsync<ApiException>();
+        observedCorrelationIds.Should().HaveCount(3);
+        observedCorrelationIds.Should().OnlyContain(id => id == "fixed-correlation-id");
+    }
+
     [Theory]
     [InlineData(0d)]
     [InlineData(-0.1d)]
@@ -401,7 +632,7 @@ public sealed class ResilienceAndTransportTests
     private static IPublishingPlatformResiliencePipeline BuildPassThroughPipeline()
     {
         var pipeline = Substitute.For<IPublishingPlatformResiliencePipeline>();
-        pipeline.ExecuteAsync(Arg.Any<Func<CancellationToken, Task<HttpResponseMessage>>>(), Arg.Any<CancellationToken>())
+        pipeline.ExecuteAsync(Arg.Any<PublishingPlatformResilienceContext>(), Arg.Any<Func<CancellationToken, Task<HttpResponseMessage>>>(), Arg.Any<CancellationToken>())
             .Returns(callInfo =>
             {
                 var operation = callInfo.Arg<Func<CancellationToken, Task<HttpResponseMessage>>>();
