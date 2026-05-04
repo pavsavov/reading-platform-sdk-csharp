@@ -53,6 +53,45 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
 }).Build();
 ```
 
+## Books lifecycle usage
+
+```csharp
+using PublishingPlatform.SDK.Models;
+
+var created = await client.Books.CreateAsync(new CreateBookRequest
+{
+    Title = "Domain-Driven Design",
+    Author = "Eric Evans",
+    Tags = new[] { "architecture", "ddd" },
+    IdempotencyKey = "create-book-001"
+});
+
+var loaded = await client.Books.GetByIdAsync(created.Id);
+
+var page = await client.Books.ListAsync(new ListBooksRequest
+{
+    Author = "Eric Evans",
+    SortBy = "title",
+    Descending = false,
+    Page = 0,
+    PageSize = 20
+});
+
+var updated = await client.Books.UpdateMetadataAsync(
+    created.Id,
+    new UpdateBookMetadataRequest
+    {
+        Title = "Domain-Driven Design (Updated)",
+        Author = created.Author,
+        Tags = created.Tags,
+        ConcurrencyToken = created.ConcurrencyToken
+    });
+
+await client.Books.DeleteAsync(updated.Id);
+```
+
+For advanced pagination ergonomics, use `ListAllAsync(...)` to stream all results.
+
 ## Opt-in resilience configuration
 
 Resilience is disabled by default. Enable only the strategies you need.

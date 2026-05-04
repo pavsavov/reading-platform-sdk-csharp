@@ -37,7 +37,7 @@ public sealed class ResilienceAndTransportTests
         var pipeline = BuildPassThroughPipeline();
         var transport = new SharedHttpTransport(httpClient, pipeline, correlationProvider, new DefaultPublishingPlatformErrorMapper());
 
-        await transport.SendAsync(HttpMethod.Get, "/books", null);
+        await transport.SendAsync(HttpMethod.Get, "/books", null, null, null);
 
         handler.LastRequest.Should().NotBeNull();
         handler.LastRequest!.Headers.Accept.ToString().Should().Contain("application/json");
@@ -60,7 +60,7 @@ public sealed class ResilienceAndTransportTests
 
         var transport = new SharedHttpTransport(httpClient, BuildPassThroughPipeline(), new FixedCorrelationIdProvider(Faker.Random.Guid().ToString("N")), new DefaultPublishingPlatformErrorMapper());
 
-        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Post, "/books", JsonContent.Create(new { Title = "A" }));
+        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Post, "/books", JsonContent.Create(new { Title = "A" }), null, null);
 
         var exception = await act.Should().ThrowAsync<ApiException>();
         exception.Which.StatusCode.Should().Be(400);
@@ -79,7 +79,7 @@ public sealed class ResilienceAndTransportTests
 
         var transport = new SharedHttpTransport(httpClient, BuildPassThroughPipeline(), new FixedCorrelationIdProvider(Faker.Random.Guid().ToString("N")), new DefaultPublishingPlatformErrorMapper());
 
-        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books", null);
+        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books", null, null, null);
 
         var exception = await act.Should().ThrowAsync<ApiException>();
         exception.Which.StatusCode.Should().Be(500);
@@ -107,7 +107,7 @@ public sealed class ResilienceAndTransportTests
         using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
         var transport = new SharedHttpTransport(httpClient, pipeline, new FixedCorrelationIdProvider(Faker.Random.Guid().ToString("N")), new DefaultPublishingPlatformErrorMapper());
 
-        await transport.SendAsync(HttpMethod.Get, "/books", null, tokenSource.Token);
+        await transport.SendAsync(HttpMethod.Get, "/books", null, null, null, tokenSource.Token);
 
         capturedToken.Should().Be(tokenSource.Token);
         capturedContext.Should().NotBeNull();
@@ -134,7 +134,7 @@ public sealed class ResilienceAndTransportTests
             new FixedCorrelationIdProvider(correlationId),
             mapper);
 
-        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books/42", null);
+        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books/42", null, null, null);
 
         var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Should().BeSameAs(expectedException);
@@ -498,7 +498,7 @@ public sealed class ResilienceAndTransportTests
             new FixedCorrelationIdProvider(Faker.Random.Guid().ToString("N")),
             mapper);
 
-        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books", null);
+        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books", null, null, null);
 
         _ = await act.Should().ThrowAsync<InvalidOperationException>();
         attempts.Should().Be(3);
@@ -536,7 +536,7 @@ public sealed class ResilienceAndTransportTests
             new FixedCorrelationIdProvider("fixed-correlation-id"),
             new DefaultPublishingPlatformErrorMapper());
 
-        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books", null);
+        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books", null, null, null);
 
         _ = await act.Should().ThrowAsync<ApiException>();
         observedCorrelationIds.Should().HaveCount(3);

@@ -30,6 +30,8 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
         HttpMethod method,
         string relativePath,
         HttpContent? content,
+        IReadOnlyDictionary<string, string>? headers = null,
+        string? operationName = null,
         CancellationToken cancellationToken = default)
     {
         var correlationId = _correlationIdProvider.Create();
@@ -40,7 +42,7 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
             },
             async ct =>
             {
-                using var request = BuildRequest(method, relativePath, content, correlationId);
+                using var request = BuildRequest(method, relativePath, content, correlationId, headers);
                 return await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
@@ -58,12 +60,18 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
             StatusCode = (int)response.StatusCode,
             Message = message,
             CorrelationId = correlationId,
+            OperationName = operationName,
         };
 
         throw _errorMapper.Map(context);
     }
 
-    internal static HttpRequestMessage BuildRequest(HttpMethod method, string relativePath, HttpContent? content, string correlationId)
+    internal static HttpRequestMessage BuildRequest(
+        HttpMethod method,
+        string relativePath,
+        HttpContent? content,
+        string correlationId,
+        IReadOnlyDictionary<string, string>? headers = null)
     {
         var request = new HttpRequestMessage(method, relativePath)
         {
@@ -73,6 +81,17 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
         if (!request.Headers.Contains(CorrelationHeaderName))
         {
             request.Headers.Add(CorrelationHeaderName, correlationId);
+        }
+
+        if (headers is not null)
+        {
+            foreach (var header in headers)
+            {
+                if (!request.Headers.TryAddWithoutValidation(header.Key, header.Value))
+                {
+                    request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+            }
         }
 
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
