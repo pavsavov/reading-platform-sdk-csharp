@@ -198,6 +198,197 @@ public sealed class BooksClientTests
         _ = await act.Should().ThrowAsync<BookNotFoundException>();
     }
 
+    [Fact]
+    public async Task CreateAsync_ThrowsBookValidationException_WhenTitleMissing()
+    {
+        var sut = new BooksClient(Substitute.For<ISharedHttpTransport>());
+
+        var act = async () => await sut.CreateAsync(new CreateBookRequest
+        {
+            Title = " ",
+            Author = "Author",
+        });
+
+        var ex = await act.Should().ThrowAsync<BookValidationException>();
+        ex.Which.Message.Should().Contain("Title is required");
+    }
+
+    [Fact]
+    public async Task CreateAsync_ThrowsBookValidationException_WhenAuthorMissing()
+    {
+        var sut = new BooksClient(Substitute.For<ISharedHttpTransport>());
+
+        var act = async () => await sut.CreateAsync(new CreateBookRequest
+        {
+            Title = "Title",
+            Author = "",
+        });
+
+        var ex = await act.Should().ThrowAsync<BookValidationException>();
+        ex.Which.Message.Should().Contain("Author is required");
+    }
+
+    [Theory]
+    [InlineData(-1, 10, "Page must be greater than or equal to zero")]
+    [InlineData(0, 0, "PageSize must be between 1 and 200")]
+    [InlineData(0, 201, "PageSize must be between 1 and 200")]
+    public async Task ListAsync_ThrowsBookValidationException_ForInvalidPaging(int page, int pageSize, string expectedMessage)
+    {
+        var sut = new BooksClient(Substitute.For<ISharedHttpTransport>());
+
+        var act = async () => await sut.ListAsync(new ListBooksRequest
+        {
+            SortBy = "title",
+            Page = page,
+            PageSize = pageSize,
+        });
+
+        var ex = await act.Should().ThrowAsync<BookValidationException>();
+        ex.Which.Message.Should().Contain(expectedMessage);
+    }
+
+    [Fact]
+    public async Task ListAsync_ThrowsBookValidationException_ForUnsupportedSortField()
+    {
+        var sut = new BooksClient(Substitute.For<ISharedHttpTransport>());
+
+        var act = async () => await sut.ListAsync(new ListBooksRequest
+        {
+            SortBy = "rank",
+            Page = 0,
+            PageSize = 20,
+        });
+
+        var ex = await act.Should().ThrowAsync<BookValidationException>();
+        ex.Which.Message.Should().Contain("SortBy must be one of");
+    }
+
+    [Fact]
+    public async Task PatchMetadataAsync_ThrowsBookValidationException_WhenPatchIsEmpty()
+    {
+        var sut = new BooksClient(Substitute.For<ISharedHttpTransport>());
+
+        var act = async () => await sut.PatchMetadataAsync("book-1", new UpdateBookPatchRequest());
+
+        var ex = await act.Should().ThrowAsync<BookValidationException>();
+        ex.Which.Message.Should().Contain("At least one patch field must be provided");
+    }
+
+    [Fact]
+    public async Task UpdateMetadataAsync_ThrowsBookValidationException_WhenFullPayloadIsIncomplete()
+    {
+        var sut = new BooksClient(Substitute.For<ISharedHttpTransport>());
+
+        var act = async () => await sut.UpdateMetadataAsync("book-1", new UpdateBookMetadataRequest
+        {
+            Title = "Title",
+            Author = "",
+        });
+
+        var ex = await act.Should().ThrowAsync<BookValidationException>();
+        ex.Which.Message.Should().Contain("Author is required for full metadata update");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_CallsTransportWithExpectedOperation()
+    {
+        var transport = Substitute.For<ISharedHttpTransport>();
+        transport.SendAsync(
+            HttpMethod.Delete,
+            "/books/book-2",
+            null,
+            null,
+            "Books.Delete",
+            Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)));
+        var sut = new BooksClient(transport);
+
+        await sut.DeleteAsync("book-2");
+
+        await transport.Received(1).SendAsync(
+            HttpMethod.Delete,
+            "/books/book-2",
+            null,
+            null,
+            "Books.Delete",
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps409ToBookConflict()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.Conflict)
+        {
+            Content = JsonContent.Create(new { Message = "conflict" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BooksClient(transport);
+
+        var act = async () => await sut.UpdateMetadataAsync("book-409", new UpdateBookMetadataRequest
+        {
+            Title = "t",
+            Author = "a",
+        });
+
+        _ = await act.Should().ThrowAsync<BookConflictException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps429ToBookRateLimited()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage((HttpStatusCode)429)
+        {
+            Content = JsonContent.Create(new { Message = "too many requests" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BooksClient(transport);
+
+        var act = async () => await sut.GetByIdAsync("book-429");
+
+        _ = await act.Should().ThrowAsync<BookRateLimitedException>();
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ThrowsBookValidationException_WhenResponsePayloadIsNull()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("null", Encoding.UTF8, "application/json"),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BooksClient(transport);
+
+        var act = async () => await sut.GetByIdAsync("book-null");
+
+        var ex = await act.Should().ThrowAsync<BookValidationException>();
+        ex.Which.Message.Should().Contain("Book payload was empty");
+    }
+
+    [Fact]
+    public async Task ListAsync_ThrowsBookValidationException_WhenPagedPayloadIsNull()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("null", Encoding.UTF8, "application/json"),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BooksClient(transport);
+
+        var act = async () => await sut.ListAsync(new ListBooksRequest
+        {
+            SortBy = "title",
+            Page = 0,
+            PageSize = 10,
+        });
+
+        var ex = await act.Should().ThrowAsync<BookValidationException>();
+        ex.Which.Message.Should().Contain("Paged book payload was empty");
+    }
+
     private sealed class SequenceHandler : HttpMessageHandler
     {
         private readonly Queue<HttpContent> _responses;
