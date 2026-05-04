@@ -34,7 +34,12 @@ var options = new PublishingPlatformClientOptions
 };
 ```
 
-## Create a client (no host)
+## Choose a configuration style
+
+- Use the Options pattern in hosted apps (ASP.NET Core, worker services) when configuration comes from `appsettings`, environment variables, or secrets providers and you want startup-time validation.
+- Use direct POCO/builder configuration in non-hosted apps, scripts, tests, or quick integrations where you construct options in code.
+
+## Create a client (no host, direct POCO)
 
 ```csharp
 using PublishingPlatform.SDK.Clients;
@@ -74,7 +79,19 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
 }).Build();
 ```
 
-## ASP.NET Core registration
+## ASP.NET Core registration (Options pattern)
+
+Option 1: bind and validate via `IOptions<PublishingPlatformClientOptions>`.
+
+```csharp
+using PublishingPlatform.SDK.Extensions;
+using PublishingPlatform.SDK.Options;
+
+builder.Services.Configure<PublishingPlatformClientOptions>(builder.Configuration.GetSection("PublishingPlatform"));
+builder.Services.AddPublishingPlatformClient();
+```
+
+Option 2: keep using direct configure callback.
 
 ```csharp
 using PublishingPlatform.SDK.Extensions;

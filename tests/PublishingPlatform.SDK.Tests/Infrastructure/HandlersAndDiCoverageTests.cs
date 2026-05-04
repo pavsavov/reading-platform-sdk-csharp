@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Extensions;
 using PublishingPlatform.SDK.Infrastructure.Auth;
@@ -102,9 +103,35 @@ public sealed class HandlersAndDiCoverageTests
 
         Action nullConfigure = () => ServiceCollectionExtensions.AddPublishingPlatformClient(services, null!);
         Action nullServices = () => ServiceCollectionExtensions.AddPublishingPlatformClient(null!, _ => { });
+        Action nullServicesForOptions = () => ServiceCollectionExtensions.AddPublishingPlatformClient(null!);
 
         nullConfigure.Should().Throw<ArgumentNullException>();
         nullServices.Should().Throw<ArgumentNullException>();
+        nullServicesForOptions.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void AddPublishingPlatformClient_ResolvesFromOptionsPatternConfiguration()
+    {
+        var services = new ServiceCollection();
+        services.Configure<PublishingPlatformClientOptions>(options =>
+        {
+            options.BaseUrl = "https://api.example.test";
+            options.ApiKey = "key";
+            options.Timeout = TimeSpan.FromSeconds(18);
+        });
+        services.AddPublishingPlatformClient();
+
+        using var provider = services.BuildServiceProvider();
+
+        var options = provider.GetRequiredService<IOptions<PublishingPlatformClientOptions>>().Value;
+        var clientOptions = provider.GetRequiredService<PublishingPlatformClientOptions>();
+        var client = provider.GetRequiredService<IPublishingPlatformClient>();
+
+        options.BaseUrl.Should().Be("https://api.example.test");
+        options.Timeout.Should().Be(TimeSpan.FromSeconds(18));
+        clientOptions.BaseUrl.Should().Be("https://api.example.test");
+        client.Should().NotBeNull();
     }
 
     [Fact]
