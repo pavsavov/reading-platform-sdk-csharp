@@ -85,12 +85,9 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
 
         if (headers is not null)
         {
-            foreach (var header in headers)
+            foreach (var header in headers.Where(x => !request.Headers.TryAddWithoutValidation(x.Key, x.Value)))
             {
-                if (!request.Headers.TryAddWithoutValidation(header.Key, header.Value))
-                {
-                    request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
-                }
+                request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
             }
         }
 

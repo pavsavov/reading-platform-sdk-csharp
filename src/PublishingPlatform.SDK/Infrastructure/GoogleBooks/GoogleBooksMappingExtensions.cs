@@ -18,7 +18,9 @@ internal static class GoogleBooksMappingExtensions
         {
             Id = payload.Id,
             Title = payload.VolumeInfo?.Title ?? string.Empty,
-            Author = payload.VolumeInfo?.Authors?.FirstOrDefault() ?? string.Empty,
+            Author = payload.VolumeInfo?.Authors is { Count: > 0 } authors
+                ? authors[0]
+                : string.Empty,
         };
     }
 }
