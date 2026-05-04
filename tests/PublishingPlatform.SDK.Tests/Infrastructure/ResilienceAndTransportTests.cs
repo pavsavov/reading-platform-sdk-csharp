@@ -1,5 +1,6 @@
 using Bogus;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Exceptions;
 using PublishingPlatform.SDK.Extensions;
@@ -204,6 +205,24 @@ public sealed class ResilienceAndTransportTests
         var resolvedMapper = provider.GetRequiredService<IPublishingPlatformErrorMapper>();
 
         resolvedMapper.Should().BeSameAs(customMapper);
+    }
+
+    [Fact]
+    public void AddPublishingPlatformClient_ThrowsForInvalidOptions_WhenUsingOptionsPattern()
+    {
+        var services = new ServiceCollection();
+        services.Configure<PublishingPlatformClientOptions>(options =>
+        {
+            options.BaseUrl = "invalid-url";
+        });
+        services.AddPublishingPlatformClient();
+
+        using var provider = services.BuildServiceProvider(validateScopes: true);
+
+        Action act = () => _ = provider.GetRequiredService<IOptions<PublishingPlatformClientOptions>>().Value;
+
+        act.Should().Throw<PublishingPlatformConfigurationException>()
+            .WithMessage("*BaseUrl must be a valid absolute URL.*");
     }
 
     [Fact]
