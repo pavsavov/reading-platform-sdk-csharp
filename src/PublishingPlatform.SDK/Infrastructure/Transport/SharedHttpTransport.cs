@@ -1,7 +1,6 @@
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Infrastructure.Transport.Errors;
+using PublishingPlatform.SDK.Infrastructure.Transport.Requests;
 
 namespace PublishingPlatform.SDK.Infrastructure.Transport;
 
@@ -13,17 +12,42 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
     private readonly IPublishingPlatformResiliencePipeline _resiliencePipeline;
     private readonly ICorrelationIdProvider _correlationIdProvider;
     private readonly IPublishingPlatformErrorMapper _errorMapper;
+    private readonly ITransportRequestFactory _requestFactory;
+    private readonly ITransportResponseErrorReader _responseErrorReader;
+    private readonly ITransportErrorContextFactory _errorContextFactory;
 
     public SharedHttpTransport(
         HttpClient httpClient,
         IPublishingPlatformResiliencePipeline resiliencePipeline,
         ICorrelationIdProvider correlationIdProvider,
         IPublishingPlatformErrorMapper errorMapper)
+        : this(
+            httpClient,
+            resiliencePipeline,
+            correlationIdProvider,
+            errorMapper,
+            TransportDependencies.CreateDefault().RequestFactory,
+            TransportDependencies.CreateDefault().ResponseErrorReader,
+            TransportDependencies.CreateDefault().ErrorContextFactory)
+    {
+    }
+
+    internal SharedHttpTransport(
+        HttpClient httpClient,
+        IPublishingPlatformResiliencePipeline resiliencePipeline,
+        ICorrelationIdProvider correlationIdProvider,
+        IPublishingPlatformErrorMapper errorMapper,
+        ITransportRequestFactory requestFactory,
+        ITransportResponseErrorReader responseErrorReader,
+        ITransportErrorContextFactory errorContextFactory)
     {
         _httpClient = httpClient;
         _resiliencePipeline = resiliencePipeline;
         _correlationIdProvider = correlationIdProvider;
         _errorMapper = errorMapper;
+        _requestFactory = requestFactory;
+        _responseErrorReader = responseErrorReader;
+        _errorContextFactory = errorContextFactory;
     }
 
     public async Task<HttpResponseMessage> SendAsync(
@@ -42,7 +66,7 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
             },
             async ct =>
             {
-                using var request = BuildRequest(method, relativePath, content, correlationId, headers);
+                using var request = _requestFactory.Create(method, relativePath, content, correlationId, headers);
                 return await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
@@ -52,66 +76,15 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
             return response;
         }
 
-        var message = await ReadErrorMessageAsync(response, cancellationToken).ConfigureAwait(false);
-        var context = new PublishingPlatformErrorContext
-        {
-            Method = method,
-            RelativePath = relativePath,
-            StatusCode = (int)response.StatusCode,
-            Message = message,
-            CorrelationId = correlationId,
-            OperationName = operationName,
-        };
+        var message = await _responseErrorReader.ReadAsync(response, cancellationToken).ConfigureAwait(false);
+        var context = _errorContextFactory.Create(
+            method,
+            relativePath,
+            (int)response.StatusCode,
+            message,
+            correlationId,
+            operationName);
 
         throw _errorMapper.Map(context);
-    }
-
-    internal static HttpRequestMessage BuildRequest(
-        HttpMethod method,
-        string relativePath,
-        HttpContent? content,
-        string correlationId,
-        IReadOnlyDictionary<string, string>? headers = null)
-    {
-        var request = new HttpRequestMessage(method, relativePath)
-        {
-            Content = content,
-        };
-
-        if (!request.Headers.Contains(CorrelationHeaderName))
-        {
-            request.Headers.Add(CorrelationHeaderName, correlationId);
-        }
-
-        if (headers is not null)
-        {
-            foreach (var header in headers.Where(x => !request.Headers.TryAddWithoutValidation(x.Key, x.Value)))
-            {
-                request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
-            }
-        }
-
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        return request;
-    }
-
-    private static async Task<string> ReadErrorMessageAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        TransportErrorResponse? payload = null;
-        try
-        {
-            payload = await response.Content.ReadFromJsonAsync<TransportErrorResponse>(cancellationToken).ConfigureAwait(false);
-        }
-        catch (JsonException)
-        {
-            // Fallback to generic message when response body is not JSON.
-        }
-
-        if (payload is not null && !string.IsNullOrWhiteSpace(payload.Message))
-        {
-            return payload.Message;
-        }
-
-        return $"HTTP {(int)response.StatusCode} returned by Publishing Platform API.";
     }
 }

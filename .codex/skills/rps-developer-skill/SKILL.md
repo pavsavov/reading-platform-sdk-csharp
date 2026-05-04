@@ -29,6 +29,10 @@ Use this skill when implementing or refactoring production SDK code, public abst
   - small focused methods
   - explicit control flow
   - no dead code or unclear shortcuts
+- Do not use fully-qualified framework type names inline when a `using` directive is appropriate.
+  - Example: avoid `System.Runtime.CompilerServices.EnumeratorCancellation` inline in signatures.
+  - Preferred: add the `using` and reference `[EnumeratorCancellation]`.
+  - If there is an edge case (for example ambiguity or symbol conflict), explicitly prompt before keeping the fully-qualified form.
 
 ## Mandatory Architecture and Coding Rules
 
@@ -39,6 +43,75 @@ Use this skill when implementing or refactoring production SDK code, public abst
 - If a new third-party dependency is approved, use the newest available compatible stable version that does not conflict with existing dependency constraints.
 - Keep exactly one class per file.
 - Treat public, non-base implementations as SDK building blocks with self-documenting naming.
+
+## Architecture Responsibility Budget (Mandatory)
+
+- Every new or changed class must declare one primary responsibility in a single line:
+  - either in a short class intent comment,
+  - or in the PR notes for that class.
+- If a class starts handling 2 or more concern buckets, extract collaborators before merge.
+- Allowed concern buckets:
+  - orchestration
+  - validation
+  - mapping/serialization
+  - transport/pipeline
+  - diagnostics/telemetry
+  - policy/configuration
+- A class may coordinate multiple collaborators, but may not implement multiple concern buckets directly.
+
+## SOLID Enforcement Rules (Mandatory)
+
+- `S` - Single Responsibility:
+  - one reason to change per class.
+  - extraction is required when class code combines:
+    - validation + transport execution,
+    - query/header construction + response parsing,
+    - domain policy + serialization logic.
+- `O` - Open/Closed:
+  - extend behavior via new strategy/factory/builder components.
+  - do not expand large switch/if chains in core public clients when adding variants.
+- `L` - Liskov Substitution:
+  - replacement implementations must preserve contract behavior, including:
+    - exception categories,
+    - null/empty handling,
+    - cancellation behavior.
+- `I` - Interface Segregation:
+  - prefer focused interfaces (for example `IBookQueryStringBuilder`) over broad utility interfaces.
+  - avoid interfaces that force unrelated members onto one implementation.
+- `D` - Dependency Inversion:
+  - top-level clients depend on abstractions.
+  - concrete composition belongs in DI/factory wiring, not in core orchestration classes.
+
+## Layered Client Pattern Contract (Mandatory)
+
+- Public client classes (for example `BooksClient`) are orchestration-only.
+- Validation, query construction, header policy, and response reading must be separate collaborators.
+- Transport layer must not implement domain validation or business policy branching.
+- Provider adapter layers (for example GoogleBooks) must stay internal.
+- Provider-specific types must never leak into public SDK contracts.
+
+## Factory + Builder + Fluent Policy (Mandatory)
+
+- Use static factories for internal default composition:
+  - `CreateDefault()` for dependency bundles or default policy sets.
+- Use builder pattern when object construction has optional strategies/policies:
+  - `...Builder.Create().With...().Build()`.
+- Fluent request builders are additive and optional for consumers.
+- Validation rules stay centralized in validator components, not spread across builders.
+- Do not create "god builders" that construct + validate + serialize + execute calls.
+
+## Refactor Trigger Thresholds (Mandatory)
+
+- Extraction is required when any of the following are true in a changed class:
+  - class includes both transport calls and query/header building;
+  - class includes both validation and JSON mapping;
+  - class includes paging iteration plus response parsing plus policy headers.
+- Additional extraction threshold for orchestration clients:
+  - more than 8 methods total, or
+  - more than 4 private helper methods.
+- If a threshold is exceeded, either:
+  - extract collaborators before merge, or
+  - document a short, explicit architectural exception in PR notes with planned follow-up.
 
 ## Naming Convention Rules
 
@@ -156,6 +229,12 @@ public sealed class PublishingRequestBuilder
 
 - Unit tests are mandatory for changed behavior.
 - Use the `rps-dotnet-testing` skill for all test implementation and test review work.
+- For architecture-sensitive changes, include collaborator seam tests (not only end-to-end tests):
+  - validator branch tests
+  - query builder deterministic output tests
+  - header factory precedence tests
+  - response reader null/error handling tests
+- For each newly extracted responsibility, add at least one regression test that prevents logic from collapsing back into orchestration classes.
 - Required test coverage includes:
   - happy path
   - edge/invalid paths
@@ -174,8 +253,26 @@ public sealed class PublishingRequestBuilder
 
 - API/contract impact reviewed:
   - Confirm whether public interfaces, signatures, models, defaults, or exception contracts changed.
+- Architecture responsibility budget reviewed:
+  - Each changed class has exactly one declared primary responsibility.
+  - Any multi-bucket behavior has been extracted or exception-noted.
+- SOLID compliance reviewed:
+  - `S/O/L/I/D` checks applied and pass/fail justified in PR notes when needed.
+- Layering compliance reviewed:
+  - Public clients are orchestration-only.
+  - Transport has no domain validation.
+  - Provider-specific types remain internal.
+- Sonar architecture pre-flight completed:
+  - Reviewed Sonar Architecture -> Split responsibilities on the PR branch.
+  - Inspected top 3 highest-depth components touched by the PR.
+  - If depth increased in touched namespaces, either refactored or documented accepted tradeoff.
+- Architecture Delta PR note included with:
+  - touched layers
+  - extracted collaborators
+  - remaining intentional coupling
 - Testing complete:
   - Unit tests added/updated using `rps-dotnet-testing` guidance.
+  - Architecture seam tests included where collaborators were introduced.
 - Docs and release alignment complete:
   - `README.md` updated when consumer-relevant patterns/decisions changed.
   - Customer-facing changes expressed in Release Please-compatible commit/PR metadata.
