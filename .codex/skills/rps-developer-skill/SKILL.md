@@ -22,6 +22,7 @@ Use this skill when implementing or refactoring production SDK code, public abst
 
 - Follow SonarCloud default C# rules as the baseline quality standard.
 - Authoritative rules reference: https://sonarcloud.io/organizations/pavsavov/rules?languages=cs
+- Target `.NET 10` or higher for all new implementation work unless explicitly overridden by the user.
 - Code must be clean and maintainable:
   - intention-revealing names
   - small focused methods
@@ -34,8 +35,17 @@ Use this skill when implementing or refactoring production SDK code, public abst
 - Never use AutoMapper.
 - Always use custom manual mapping through static extension methods.
 - Do not introduce any new third-party dependency unless the user has explicitly approved it.
+- If a new third-party dependency is approved, use the newest available compatible stable version that does not conflict with existing dependency constraints.
 - Keep exactly one class per file.
 - Treat public, non-base implementations as SDK building blocks with self-documenting naming.
+
+## XML Documentation Requirement
+
+- Add XML documentation comments to all classes, interfaces, properties, and members (private and public).
+- Public SDK-facing members require extra care:
+  - explain intent and behavior clearly,
+  - document parameters, return values, side effects, and exceptions where applicable,
+  - write comments from the SDK consumer perspective so developers can understand how to use the API safely.
 
 ## Mapping Rule (Required Pattern)
 
