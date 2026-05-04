@@ -63,7 +63,7 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
         throw _errorMapper.Map(context);
     }
 
-    internal HttpRequestMessage BuildRequest(HttpMethod method, string relativePath, HttpContent? content, string correlationId)
+    internal static HttpRequestMessage BuildRequest(HttpMethod method, string relativePath, HttpContent? content, string correlationId)
     {
         var request = new HttpRequestMessage(method, relativePath)
         {
