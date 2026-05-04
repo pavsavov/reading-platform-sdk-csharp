@@ -32,33 +32,38 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
         HttpContent? content,
         CancellationToken cancellationToken = default)
     {
-        return await _resiliencePipeline.ExecuteAsync(
+        var correlationId = _correlationIdProvider.Create();
+        var response = await _resiliencePipeline.ExecuteAsync(
+            new PublishingPlatformResilienceContext
+            {
+                Method = method,
+            },
             async ct =>
             {
-                using var request = BuildRequest(method, relativePath, content);
-                var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var message = await ReadErrorMessageAsync(response, ct).ConfigureAwait(false);
-                    request.Headers.TryGetValues(CorrelationHeaderName, out var correlationValues);
-                    var context = new PublishingPlatformErrorContext
-                    {
-                        Method = method,
-                        RelativePath = relativePath,
-                        StatusCode = (int)response.StatusCode,
-                        Message = message,
-                        CorrelationId = correlationValues?.FirstOrDefault(),
-                    };
-
-                    throw _errorMapper.Map(context);
-                }
-
-                return response;
+                using var request = BuildRequest(method, relativePath, content, correlationId);
+                return await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return response;
+        }
+
+        var message = await ReadErrorMessageAsync(response, cancellationToken).ConfigureAwait(false);
+        var context = new PublishingPlatformErrorContext
+        {
+            Method = method,
+            RelativePath = relativePath,
+            StatusCode = (int)response.StatusCode,
+            Message = message,
+            CorrelationId = correlationId,
+        };
+
+        throw _errorMapper.Map(context);
     }
 
-    internal HttpRequestMessage BuildRequest(HttpMethod method, string relativePath, HttpContent? content)
+    internal HttpRequestMessage BuildRequest(HttpMethod method, string relativePath, HttpContent? content, string correlationId)
     {
         var request = new HttpRequestMessage(method, relativePath)
         {
@@ -67,7 +72,7 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
 
         if (!request.Headers.Contains(CorrelationHeaderName))
         {
-            request.Headers.Add(CorrelationHeaderName, _correlationIdProvider.Create());
+            request.Headers.Add(CorrelationHeaderName, correlationId);
         }
 
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));

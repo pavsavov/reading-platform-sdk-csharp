@@ -21,7 +21,8 @@ var options = new PublishingPlatformClientOptions
         {
             Enabled = true,
             MaxRetryAttempts = 3,
-            BaseDelay = TimeSpan.FromMilliseconds(200)
+            BaseDelay = TimeSpan.FromMilliseconds(200),
+            RetryNonIdempotentMethods = false
         },
         CircuitBreaker = new CircuitBreakerResilienceOptions
         {
@@ -55,6 +56,8 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
 ## Opt-in resilience configuration
 
 Resilience is disabled by default. Enable only the strategies you need.
+By default, retries are applied only to idempotent methods (`GET`, `PUT`, `DELETE`, `HEAD`, `OPTIONS`, `TRACE`).
+Retries for non-idempotent methods (`POST`, `PATCH`) are explicit and opt-in.
 
 ```csharp
 var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClientOptions
@@ -74,6 +77,34 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
         {
             Enabled = true,
             Timeout = TimeSpan.FromSeconds(5)
+        }
+    }
+}).Build();
+```
+
+## Retry behavior defaults
+
+| HTTP Method Category | Default Retry Behavior | Transient Statuses |
+| --- | --- | --- |
+| Idempotent (`GET`, `PUT`, `DELETE`, `HEAD`, `OPTIONS`, `TRACE`) | Retry enabled when retry strategy is enabled | `429`, `502`, `503`, `504` |
+| Non-idempotent (`POST`, `PATCH`) | Not retried by default | N/A |
+
+You can opt in to retries for non-idempotent methods:
+
+```csharp
+var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClientOptions
+{
+    BaseUrl = "https://api.books.example",
+    ApiKey = "your-api-key",
+    Resilience = new PublishingPlatformResilienceOptions
+    {
+        Enabled = true,
+        Retry = new RetryResilienceOptions
+        {
+            Enabled = true,
+            MaxRetryAttempts = 3,
+            BaseDelay = TimeSpan.FromMilliseconds(200),
+            RetryNonIdempotentMethods = true
         }
     }
 }).Build();
