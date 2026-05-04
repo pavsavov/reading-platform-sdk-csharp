@@ -1,3 +1,3 @@
-﻿# BasicUsage
+# Basic Usage
 
-_TODO: add example._
+Use `PublishingPlatformClientExample.csx` for a minimal end-to-end setup example with optional resilience.

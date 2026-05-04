@@ -1,14 +1,29 @@
-﻿using PublishingPlatform.SDK.Clients;
+using PublishingPlatform.SDK.Clients;
+using PublishingPlatform.SDK.Options;
 
 namespace PublishingPlatform.SDK.Tests.Books;
 
 public sealed class BooksClientTests
 {
     [Fact]
-    public void CanCreateBooksClient()
+    public void BuildClient_ReturnsClientWithAllBookCentricModules()
     {
-        var client = new BooksClient();
+        var options = new PublishingPlatformClientOptions
+        {
+            BaseUrl = "https://example.test",
+            ApiKey = "test-key",
+        };
 
-        Assert.NotNull(client);
+        var client = PublishingPlatformClientBuilder.Create(options).Build();
+
+        Assert.NotNull(client.Books);
+        Assert.NotNull(client.BookContent);
+        Assert.NotNull(client.BookPublishing);
+        Assert.NotNull(client.BookDistribution);
+        Assert.NotNull(client.BookAccess);
+        Assert.NotNull(client.BookAnalytics);
+        Assert.NotNull(client.BookAuditLogs);
+        Assert.NotNull(client.BookAssets);
+        Assert.NotNull(client.Webhooks);
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace PublishingPlatform.SDK.Options;
+namespace PublishingPlatform.SDK.Options;
 
 public sealed class PublishingPlatformClientOptions
 {
@@ -7,4 +7,6 @@ public sealed class PublishingPlatformClientOptions
     public string ApiKey { get; set; } = string.Empty;
 
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    public PublishingPlatformResilienceOptions? Resilience { get; set; }
 }

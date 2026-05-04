@@ -1,4 +1,5 @@
-﻿using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Infrastructure.Transport;
 
 namespace PublishingPlatform.SDK.Clients;
 
@@ -43,4 +44,18 @@ public sealed class PublishingPlatformClient : IPublishingPlatformClient
     public IBookAssetsClient BookAssets { get; }
 
     public IWebhooksClient Webhooks { get; }
+
+    internal static PublishingPlatformClient CreateFromTransport(ISharedHttpTransport transport)
+    {
+        return new PublishingPlatformClient(
+            new BooksClient(transport),
+            new BookContentClient(transport),
+            new BookPublishingClient(transport),
+            new BookDistributionClient(transport),
+            new BookAccessClient(transport),
+            new BookAnalyticsClient(transport),
+            new BookAuditLogsClient(transport),
+            new BookAssetsClient(transport),
+            new WebhooksClient(transport));
+    }
 }
