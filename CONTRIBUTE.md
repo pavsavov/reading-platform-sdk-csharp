@@ -131,13 +131,14 @@ CI/CD does not:
 - Grace period (warning only): until `2026-05-17`
 - Hard enforcement (failing checks): starts on `2026-05-17`
 
-## Required repository secrets
+## Repository credentials
 
-Configure these secrets in GitHub Actions:
+The release and quality workflows require repository credentials and external service configuration.
 
-- `RELEASE_PLEASE_TOKEN`: a PAT used by Release Please (required so downstream workflows trigger from automation-created tags/PRs).
-- `NUGET_USER`: nuget.org profile name used by trusted publishing login.
-- `SONAR_TOKEN`: optional token for Sonar analysis.
+- Do not document credential names, values, or scopes in this public guide.
+- Maintainers should configure required credentials in repository settings using least-privilege access.
+- Trusted publishing is used for package release authentication.
+- If workflow credential setup changes, update maintainer-only operational documentation.
 
 Trusted publishing requirements:
 
