@@ -1,7 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using PublishingPlatform.SDK.Abstractions;
-using PublishingPlatform.SDK.Infrastructure.Errors;
 
 namespace PublishingPlatform.SDK.Infrastructure.Transport;
 
@@ -12,15 +12,18 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
     private readonly HttpClient _httpClient;
     private readonly IPublishingPlatformResiliencePipeline _resiliencePipeline;
     private readonly ICorrelationIdProvider _correlationIdProvider;
+    private readonly IPublishingPlatformErrorMapper _errorMapper;
 
     public SharedHttpTransport(
         HttpClient httpClient,
         IPublishingPlatformResiliencePipeline resiliencePipeline,
-        ICorrelationIdProvider correlationIdProvider)
+        ICorrelationIdProvider correlationIdProvider,
+        IPublishingPlatformErrorMapper errorMapper)
     {
         _httpClient = httpClient;
         _resiliencePipeline = resiliencePipeline;
         _correlationIdProvider = correlationIdProvider;
+        _errorMapper = errorMapper;
     }
 
     public async Task<HttpResponseMessage> SendAsync(
@@ -37,7 +40,17 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
                 if (!response.IsSuccessStatusCode)
                 {
                     var message = await ReadErrorMessageAsync(response, ct).ConfigureAwait(false);
-                    throw ErrorMapper.Map((int)response.StatusCode, message);
+                    request.Headers.TryGetValues(CorrelationHeaderName, out var correlationValues);
+                    var context = new PublishingPlatformErrorContext
+                    {
+                        Method = method,
+                        RelativePath = relativePath,
+                        StatusCode = (int)response.StatusCode,
+                        Message = message,
+                        CorrelationId = correlationValues?.FirstOrDefault(),
+                    };
+
+                    throw _errorMapper.Map(context);
                 }
 
                 return response;
@@ -63,7 +76,16 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
 
     private static async Task<string> ReadErrorMessageAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
-        var payload = await response.Content.ReadFromJsonAsync<TransportErrorResponse>(cancellationToken).ConfigureAwait(false);
+        TransportErrorResponse? payload = null;
+        try
+        {
+            payload = await response.Content.ReadFromJsonAsync<TransportErrorResponse>(cancellationToken).ConfigureAwait(false);
+        }
+        catch (JsonException)
+        {
+            // Fallback to generic message when response body is not JSON.
+        }
+
         if (payload is not null && !string.IsNullOrWhiteSpace(payload.Message))
         {
             return payload.Message;

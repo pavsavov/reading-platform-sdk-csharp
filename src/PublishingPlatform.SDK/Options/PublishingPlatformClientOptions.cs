@@ -1,3 +1,5 @@
+using PublishingPlatform.SDK.Abstractions;
+
 namespace PublishingPlatform.SDK.Options;
 
 public sealed class PublishingPlatformClientOptions
@@ -9,4 +11,6 @@ public sealed class PublishingPlatformClientOptions
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public PublishingPlatformResilienceOptions? Resilience { get; set; }
+
+    public IPublishingPlatformErrorMapper? ErrorMapper { get; set; }
 }

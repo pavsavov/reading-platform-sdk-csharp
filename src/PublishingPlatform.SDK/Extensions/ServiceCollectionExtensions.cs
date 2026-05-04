@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients;
+using PublishingPlatform.SDK.Infrastructure.Errors;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal.Resilience;
 using PublishingPlatform.SDK.Options;
@@ -27,15 +28,18 @@ public static class ServiceCollectionExtensions
             client.Timeout = options.Timeout;
         });
 
-        services.AddSingleton(_ =>
+        services.AddSingleton<IPublishingPlatformResiliencePipeline>(_ =>
             ResiliencePipelineFactory.Create(options.Resilience));
+        services.AddSingleton<IPublishingPlatformErrorMapper>(_ =>
+            options.ErrorMapper ?? new DefaultPublishingPlatformErrorMapper());
         services.AddSingleton<ICorrelationIdProvider, GuidCorrelationIdProvider>();
         services.AddSingleton<ISharedHttpTransport>(sp =>
         {
             var httpClient = SdkHttpClientResolver.Resolve(sp);
             var pipeline = sp.GetRequiredService<IPublishingPlatformResiliencePipeline>();
             var correlationProvider = sp.GetRequiredService<ICorrelationIdProvider>();
-            return new SharedHttpTransport(httpClient, pipeline, correlationProvider);
+            var errorMapper = sp.GetRequiredService<IPublishingPlatformErrorMapper>();
+            return new SharedHttpTransport(httpClient, pipeline, correlationProvider, errorMapper);
         });
 
         services.AddSingleton<IBooksClient>(sp => new BooksClient(sp.GetRequiredService<ISharedHttpTransport>()));
