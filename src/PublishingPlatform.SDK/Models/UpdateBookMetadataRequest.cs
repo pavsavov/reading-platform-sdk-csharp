@@ -1,32 +1,27 @@
 namespace PublishingPlatform.SDK.Models;
 
 /// <summary>
-/// Represents a book entity managed by the platform.
+/// Represents input data required to update full mutable book metadata.
 /// </summary>
-public sealed class Book
+public sealed class UpdateBookMetadataRequest
 {
     /// <summary>
-    /// Gets or sets the unique identifier.
-    /// </summary>
-    public string Id { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the title.
+    /// Gets or sets the updated title value.
     /// </summary>
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the author.
+    /// Gets or sets the updated author value.
     /// </summary>
     public string Author { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets classification tags.
+    /// Gets or sets updated tags.
     /// </summary>
     public IReadOnlyList<string> Tags { get; set; } = Array.Empty<string>();
 
     /// <summary>
-    /// Gets or sets the optional concurrency token.
+    /// Gets or sets the optimistic concurrency token (for example ETag or version).
     /// </summary>
     public string? ConcurrencyToken { get; set; }
 }

@@ -59,6 +59,12 @@ The query surface is planned as an SDK-owned API, for example an `IBookQueryClie
 
 Google Books API may be used as an internal adapter or search source. It must not become a public provider abstraction or leak Google-specific wire shapes into the SDK surface.
 
+Current implementation direction:
+
+- `IBooksClient` remains the public platform-owned contract.
+- Google Books integration is represented only by internal adapter seams and internal DTO-to-model mappings.
+- API key oriented Google volume enrichment is prepared internally; OAuth-only mylibrary flows stay deferred.
+
 The first SDK-focused search flow should combine local uploaded files with external book discovery data behind one SDK search API:
 
 ```text

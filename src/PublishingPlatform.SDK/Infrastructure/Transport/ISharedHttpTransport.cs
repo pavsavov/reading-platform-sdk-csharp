@@ -6,5 +6,7 @@ internal interface ISharedHttpTransport
         HttpMethod method,
         string relativePath,
         HttpContent? content,
+        IReadOnlyDictionary<string, string>? headers = null,
+        string? operationName = null,
         CancellationToken cancellationToken = default);
 }

@@ -40,6 +40,17 @@ Use this skill when implementing or refactoring production SDK code, public abst
 - Keep exactly one class per file.
 - Treat public, non-base implementations as SDK building blocks with self-documenting naming.
 
+## Naming Convention Rules
+
+- Public SDK contracts must use consumer-friendly names:
+  - command/query inputs: `*Request`
+  - explicit outputs/envelopes: `*Response` (when needed)
+  - core domain entities: clear nouns (for example `Book`).
+- Internal provider wire models must not leak into public surface:
+  - prefer `*Payload` for provider JSON/wire shapes
+  - provider-specific names must stay internal only.
+- Avoid exposing `*Dto` types as public SDK contracts.
+
 ## XML Documentation Requirement
 
 - Add XML documentation comments to all classes, interfaces, properties, and members (private and public).
@@ -53,14 +64,14 @@ Use this skill when implementing or refactoring production SDK code, public abst
 Use explicit static extension mapping.
 
 ```csharp
-public static class BookDtoMappingExtensions
+public static class BookPayloadMappingExtensions
 {
-    public static Book ToDomain(this BookDto dto)
+    public static Book ToDomain(this BookPayload payload)
     {
         return new Book(
-            id: dto.Id,
-            title: dto.Title,
-            author: dto.Author);
+            id: payload.Id,
+            title: payload.Title,
+            author: payload.Author);
     }
 }
 ```
