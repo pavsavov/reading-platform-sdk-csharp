@@ -136,8 +136,14 @@ CI/CD does not:
 Configure these secrets in GitHub Actions:
 
 - `RELEASE_PLEASE_TOKEN`: a PAT used by Release Please (required so downstream workflows trigger from automation-created tags/PRs).
-- `NUGET_API_KEY`: NuGet.org API key for package publishing.
+- `NUGET_USER`: nuget.org profile name used by trusted publishing login.
 - `SONAR_TOKEN`: optional token for Sonar analysis.
+
+Trusted publishing requirements:
+
+- Configure a nuget.org Trusted Publishing policy for this repository.
+- Workflow file name in policy must match `.github/workflows/publish-nuget.yaml`.
+- Keep `permissions.id-token: write` in publish workflow.
 
 ## Notes for maintainers
 
