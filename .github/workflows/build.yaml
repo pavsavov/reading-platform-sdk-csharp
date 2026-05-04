@@ -54,6 +54,7 @@ jobs:
         run: dotnet build .\PublishingPlatform.SDK.sln --configuration Release --no-restore
 
       - name: Test with coverage
+        if: ${{ env.SONAR_TOKEN == '' }}
         shell: powershell
         run: |
           dotnet test .\PublishingPlatform.SDK.sln `
@@ -61,7 +62,7 @@ jobs:
             --no-build `
             /p:CollectCoverage=true `
             /p:CoverletOutputFormat=opencover `
-            /p:CoverletOutput=./TestResults/coverage.
+            /p:CoverletOutput=./TestResults/Coverage/
 
       - name: Dependency vulnerability audit
         shell: powershell
@@ -95,6 +96,12 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' }}
         shell: powershell
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"pavsavov_reading-platform-sdk-csharp" /o:"pavsavov" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.cs.opencover.reportsPaths="**/TestResults/coverage.opencover.xml"
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"pavsavov_reading-platform-sdk-csharp" /o:"pavsavov" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.cs.opencover.reportsPaths="**/TestResults/Coverage/coverage.opencover.xml"
           dotnet build .\PublishingPlatform.SDK.sln --configuration Release --no-restore
+          dotnet test .\PublishingPlatform.SDK.sln `
+            --configuration Release `
+            --no-build `
+            /p:CollectCoverage=true `
+            /p:CoverletOutputFormat=opencover `
+            /p:CoverletOutput=./TestResults/Coverage/
           ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
