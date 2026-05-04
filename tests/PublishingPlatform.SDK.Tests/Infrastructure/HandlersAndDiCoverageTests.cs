@@ -158,6 +158,15 @@ public sealed class HandlersAndDiCoverageTests
         resilience.Should().BeOfType<DefaultPublishingPlatformResiliencePipeline>();
         mapper.Should().BeSameAs(customMapper);
         client.Should().NotBeNull();
+        client.Books.Should().NotBeNull();
+        client.BookContent.Should().NotBeNull();
+        client.BookPublishing.Should().NotBeNull();
+        client.BookDistribution.Should().NotBeNull();
+        client.BookAccess.Should().NotBeNull();
+        client.BookAnalytics.Should().NotBeNull();
+        client.BookAuditLogs.Should().NotBeNull();
+        client.BookAssets.Should().NotBeNull();
+        client.Webhooks.Should().NotBeNull();
     }
 
     [Fact]
