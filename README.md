@@ -110,6 +110,7 @@ Runnable scripts are available in:
 
 - `examples/BasicUsage/BuilderInitializationExample.csx`
 - `examples/BasicUsage/DiInitializationExample.csx`
+- `examples/BookPublishing/BookPublishingExample.csx`
 
 ## Client modules: available properties and use cases
 
@@ -154,15 +155,18 @@ Typical use cases once expanded:
 
 Module accessor for publish-oriented workflows.
 
-Current status:
+Available operations:
 
-- Property is available on the root client.
-- Interface is currently a placeholder (no public operations yet in this SDK version).
+- `PublishAsync(...)`: publish a book and return current publishing state.
+- `UnpublishAsync(...)`: reverse publication and return current publishing state.
+- `ScheduleAsync(...)`: schedule publication at a specific date/time.
+- `GetStatusAsync(...)`: fetch the current publishing status for a book.
 
-Typical use cases once expanded:
+Typical use cases:
 
-- Triggering publication jobs.
-- Managing publish state transitions.
+- Triggering publication after metadata/content validation is complete.
+- Scheduling time-based release windows.
+- Operational checks for current publication state and failures.
 
 ### `BookDistribution` (`IBookDistributionClient`)
 

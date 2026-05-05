@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using PublishingPlatform.SDK.Infrastructure.Transport;
 
 namespace PublishingPlatform.SDK.Infrastructure.Transport.Requests;
 
@@ -16,9 +17,9 @@ internal sealed class DefaultTransportRequestFactory : ITransportRequestFactory
             Content = content,
         };
 
-        if (!request.Headers.Contains(SharedHttpTransport.CorrelationHeaderName))
+        if (!request.Headers.Contains(TransportHeaderNames.CorrelationId))
         {
-            request.Headers.Add(SharedHttpTransport.CorrelationHeaderName, correlationId);
+            request.Headers.Add(TransportHeaderNames.CorrelationId, correlationId);
         }
 
         if (headers is not null)

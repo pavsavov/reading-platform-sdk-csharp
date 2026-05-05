@@ -6,7 +6,7 @@ namespace PublishingPlatform.SDK.Infrastructure.Transport;
 
 internal sealed class SharedHttpTransport : ISharedHttpTransport
 {
-    internal const string CorrelationHeaderName = "X-Correlation-Id";
+    internal const string CorrelationHeaderName = TransportHeaderNames.CorrelationId;
 
     private readonly HttpClient _httpClient;
     private readonly IPublishingPlatformResiliencePipeline _resiliencePipeline;
@@ -21,14 +21,24 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
         IPublishingPlatformResiliencePipeline resiliencePipeline,
         ICorrelationIdProvider correlationIdProvider,
         IPublishingPlatformErrorMapper errorMapper)
+        : this(httpClient, resiliencePipeline, correlationIdProvider, errorMapper, TransportDependencies.CreateDefault())
+    {
+    }
+
+    private SharedHttpTransport(
+        HttpClient httpClient,
+        IPublishingPlatformResiliencePipeline resiliencePipeline,
+        ICorrelationIdProvider correlationIdProvider,
+        IPublishingPlatformErrorMapper errorMapper,
+        TransportDependencies dependencies)
         : this(
             httpClient,
             resiliencePipeline,
             correlationIdProvider,
             errorMapper,
-            TransportDependencies.CreateDefault().RequestFactory,
-            TransportDependencies.CreateDefault().ResponseErrorReader,
-            TransportDependencies.CreateDefault().ErrorContextFactory)
+            dependencies.RequestFactory,
+            dependencies.ResponseErrorReader,
+            dependencies.ErrorContextFactory)
     {
     }
 
