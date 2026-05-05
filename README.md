@@ -53,6 +53,206 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
 }).Build();
 ```
 
+## Initialization examples
+
+The root client exposes resource-style modules such as:
+
+- `platformClient.Books`
+- `platformClient.BookContent`
+- `platformClient.BookPublishing`
+- `platformClient.Webhooks`
+
+### Direct builder initialization
+
+```csharp
+using PublishingPlatform.SDK.Clients;
+using PublishingPlatform.SDK.Options;
+
+var platformClient = PublishingPlatformClientBuilder.Create(new PublishingPlatformClientOptions
+{
+    BaseUrl = "https://api.books.example",
+    ApiKey = "your-api-key",
+    Timeout = TimeSpan.FromSeconds(30)
+}).Build();
+
+var books = platformClient.Books;
+var content = platformClient.BookContent;
+var publishing = platformClient.BookPublishing;
+var webhooks = platformClient.Webhooks;
+```
+
+### DI initialization (ASP.NET Core / host apps)
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Extensions;
+
+var services = new ServiceCollection();
+
+services.AddPublishingPlatformClient(options =>
+{
+    options.BaseUrl = "https://api.books.example";
+    options.ApiKey = "your-api-key";
+    options.Timeout = TimeSpan.FromSeconds(30);
+});
+
+using var provider = services.BuildServiceProvider();
+var platformClient = provider.GetRequiredService<IPublishingPlatformClient>();
+
+var books = platformClient.Books;
+var content = platformClient.BookContent;
+var publishing = platformClient.BookPublishing;
+var webhooks = platformClient.Webhooks;
+```
+
+Runnable scripts are available in:
+
+- `examples/BasicUsage/BuilderInitializationExample.csx`
+- `examples/BasicUsage/DiInitializationExample.csx`
+
+## Client modules: available properties and use cases
+
+`IPublishingPlatformClient` is the SDK root and exposes module clients as properties.
+
+### `Books` (`IBooksClient`)
+
+Primary module for active book lifecycle operations.
+
+Available operations:
+
+- `CreateAsync(...)`: create a new book record.
+- `GetByIdAsync(...)`: retrieve a single book by ID.
+- `ListAsync(...)`: list books with filtering, sorting, and paging.
+- `ListAllAsync(...)`: stream books across all pages as `IAsyncEnumerable<Book>`.
+- `UpdateMetadataAsync(...)`: replace mutable metadata.
+- `PatchMetadataAsync(...)`: partially update mutable metadata.
+- `DeleteAsync(...)`: remove a book by ID.
+
+Typical use cases:
+
+- Catalog ingestion and onboarding of new titles.
+- Internal back-office CRUD flows.
+- Scheduled sync jobs that iterate the full catalog (`ListAllAsync`).
+- Metadata correction workflows with optimistic concurrency tokens.
+
+### `BookContent` (`IBookContentClient`)
+
+Module accessor for book content workflows (for example upload, replacement, or content-related actions).
+
+Current status:
+
+- Property is available on the root client.
+- Interface is currently a placeholder (no public operations yet in this SDK version).
+
+Typical use cases once expanded:
+
+- Uploading source content for books.
+- Replacing or versioning stored content artifacts.
+
+### `BookPublishing` (`IBookPublishingClient`)
+
+Module accessor for publish-oriented workflows.
+
+Current status:
+
+- Property is available on the root client.
+- Interface is currently a placeholder (no public operations yet in this SDK version).
+
+Typical use cases once expanded:
+
+- Triggering publication jobs.
+- Managing publish state transitions.
+
+### `BookDistribution` (`IBookDistributionClient`)
+
+Module accessor for downstream distribution workflows.
+
+Current status:
+
+- Property is available on the root client.
+- Interface is currently a placeholder (no public operations yet in this SDK version).
+
+Typical use cases once expanded:
+
+- Pushing books to channels/partners.
+- Tracking distribution outcome and status.
+
+### `BookAccess` (`IBookAccessClient`)
+
+Module accessor for access-control and entitlement-related workflows.
+
+Current status:
+
+- Property is available on the root client.
+- Interface is currently a placeholder (no public operations yet in this SDK version).
+
+Typical use cases once expanded:
+
+- Access policy assignment.
+- Reader or tenant entitlement operations.
+
+### `BookAnalytics` (`IBookAnalyticsClient`)
+
+Module accessor for analytics and reporting workflows.
+
+Current status:
+
+- Property is available on the root client.
+- Interface is currently a placeholder (no public operations yet in this SDK version).
+
+Typical use cases once expanded:
+
+- Consumption/performance reporting.
+- Title-level engagement insights.
+
+### `BookAuditLogs` (`IBookAuditLogsClient`)
+
+Module accessor for audit trail workflows.
+
+Current status:
+
+- Property is available on the root client.
+- Interface is currently a placeholder (no public operations yet in this SDK version).
+
+Typical use cases once expanded:
+
+- Compliance-oriented activity history.
+- Operational troubleshooting and traceability.
+
+### `BookAssets` (`IBookAssetsClient`)
+
+Module accessor for asset-management workflows.
+
+Current status:
+
+- Property is available on the root client.
+- Interface is currently a placeholder (no public operations yet in this SDK version).
+
+Typical use cases once expanded:
+
+- Managing covers, previews, and supplemental media.
+- Asset lifecycle and replacement flows.
+
+### `Webhooks` (`IWebhooksClient`)
+
+Module accessor for webhook-oriented integration workflows.
+
+Current status:
+
+- Property is available on the root client.
+- Interface is currently a placeholder (no public operations yet in this SDK version).
+
+Typical use cases once expanded:
+
+- Registering callback endpoints.
+- Receiving event notifications for asynchronous platform events.
+
+## Which module should I use?
+
+- Use `Books` today for production book CRUD/listing flows.
+- Use other module properties as stable access points in your codebase while their operation surfaces are being expanded in upcoming SDK iterations.
+
 ## Books lifecycle usage
 
 ```csharp

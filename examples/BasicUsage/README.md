@@ -1,3 +1,7 @@
 # Basic Usage
 
-Use `PublishingPlatformClientExample.csx` for a minimal end-to-end setup example with optional resilience.
+Use these scripts for SDK client initialization patterns:
+
+- `PublishingPlatformClientExample.csx`: minimal builder setup with optional resilience.
+- `BuilderInitializationExample.csx`: direct builder initialization with module access.
+- `DiInitializationExample.csx`: DI initialization and module resolution via `IPublishingPlatformClient`.
