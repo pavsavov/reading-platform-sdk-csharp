@@ -33,6 +33,11 @@ Use this skill when implementing or refactoring production SDK code, public abst
   - Example: avoid `System.Runtime.CompilerServices.EnumeratorCancellation` inline in signatures.
   - Preferred: add the `using` and reference `[EnumeratorCancellation]`.
   - If there is an edge case (for example ambiguity or symbol conflict), explicitly prompt before keeping the fully-qualified form.
+- Always add the required `using` directives for SDK and framework types instead of writing fully-qualified type names in code signatures or method bodies.
+  - Example: avoid `Task<PublishingPlatform.SDK.Models.BookContent>`.
+  - Preferred: add `using PublishingPlatform.SDK.Models;` and write `Task<BookContent>`.
+- If a type name collision exists (for example namespace vs model name), use a `using` alias instead of inline fully-qualified types.
+  - Example: `using BookContentModel = PublishingPlatform.SDK.Models.BookContent;` then use `Task<BookContentModel>`.
 
 ## Mandatory Architecture and Coding Rules
 
