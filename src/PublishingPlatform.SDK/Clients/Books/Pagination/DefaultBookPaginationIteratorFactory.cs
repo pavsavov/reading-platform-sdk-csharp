@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using PublishingPlatform.SDK.Models;
 using PublishingPlatform.SDK.Models.Common;
 
@@ -8,7 +9,7 @@ internal sealed class DefaultBookPaginationIteratorFactory : IBookPaginationIter
     public async IAsyncEnumerable<Book> IterateAsync(
         ListBooksRequest request,
         Func<ListBooksRequest, CancellationToken, Task<PagedResult<Book>>> pageLoader,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct)
     {
         var iterationRequest = CloneRequest(request);
         while (true)
