@@ -97,8 +97,8 @@ Automated bump mapping:
    - `Directory.Build.props` version
 5. Maintainer reviews release PR correctness.
 6. Maintainer merges release PR.
-7. Release Please creates a `vX.Y.Z` tag.
-8. Tag-triggered workflow publishes to NuGet.org.
+7. Release Please creates a `vX.Y.Z` tag and GitHub Release.
+8. Release-published workflow publishes to NuGet.org.
 
 ## CI/CD responsibilities
 
@@ -118,7 +118,7 @@ CI/CD automates:
 - changelog updates
 - version updates
 - release tag creation
-- NuGet publish on release tags
+- NuGet publish on published GitHub releases
 
 CI/CD does not:
 
