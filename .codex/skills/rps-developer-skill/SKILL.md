@@ -39,6 +39,10 @@ Use this skill when implementing or refactoring production SDK code, public abst
 - SDK HTTP consumption must be REST-oriented only.
 - Never use AutoMapper.
 - Always use custom manual mapping through static extension methods.
+- Avoid redundant constructor null guards for dependencies resolved exclusively by DI:
+  - Do not add `ArgumentNullException.ThrowIfNull(...)` for DI-only constructor parameters.
+  - Rely on container resolution failures for missing registrations.
+  - Keep null guards for inputs that can come from external/non-DI callers (for example public methods, factory inputs, builder configuration inputs).
 - Do not introduce any new third-party dependency unless the user has explicitly approved it.
 - If a new third-party dependency is approved, use the newest available compatible stable version that does not conflict with existing dependency constraints.
 - Keep exactly one class per file.
