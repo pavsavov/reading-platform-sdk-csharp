@@ -15,16 +15,27 @@ jobs:
       - name: Validate title pattern
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           echo "PR title: $PR_TITLE"
+          echo "Head branch: $HEAD_REF"
 
           release_pattern='^chore\([^)]+\): release [0-9]+\.[0-9]+\.[0-9]+$'
-          feature_pattern='^RPS-[0-9]+ (feat|fix|docs|test|refactor|chore)(\([a-z0-9-]+\))?!?: .+$'
 
           if [[ "$PR_TITLE" =~ $release_pattern ]]; then
             echo "Release PR title detected and allowed."
             exit 0
           fi
+
+          if [[ "$HEAD_REF" =~ ([Rr][Pp][Ss]-[0-9]+) ]]; then
+            branch_ticket="$(echo "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')"
+          else
+            echo "Could not extract ticket id from branch name."
+            echo "Expected branch examples: feature/RPS-21, bugfix/RPS-21"
+            exit 1
+          fi
+
+          feature_pattern="^${branch_ticket} (feat|fix|docs|test|refactor|chore)(\\([a-z0-9-]+\\))?!?: .+$"
 
           if [[ "$PR_TITLE" =~ $feature_pattern ]]; then
             echo "PR title is valid."
@@ -32,7 +43,9 @@ jobs:
           fi
 
           echo "Invalid PR title format."
-          echo "Expected contributor format: RPS-<number> type: subject"
-          echo "Example: RPS-4 docs: update contribution guide"
-          echo "Breaking change example: RPS-21 feat!: rename client API"
+          echo "Expected contributor format: ${branch_ticket} type: subject"
+          echo "Scoped format is also valid: ${branch_ticket} type(scope): subject"
+          echo "Example: ${branch_ticket} docs: update contribution guide"
+          echo "Scoped example: ${branch_ticket} refactor(http): simplify retry policy"
+          echo "Breaking change example: ${branch_ticket} feat!: rename client API"
           exit 1

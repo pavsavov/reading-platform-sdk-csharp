@@ -1,16 +1,17 @@
 ---
 name: rps-pr-completion
-description: Generate final PR completion artifacts for this repo, including a ticket-prefixed commit message and a Markdown PR summary with a Release Please BEGIN_COMMIT_OVERRIDE block.
+description: Generate final PR completion artifacts for this repo, including PR-template-ready summary markdown, conventional commit messages, Release Please override guidance, and manual tag-based NuGet publish notes.
 ---
 
 # rps-pr-completion
 
 ## Goal
 
-Produce two final delivery artifacts for a completed ticket:
+Produce final delivery artifacts for a completed ticket:
 
-1. A proper commit message using the repository ticket format.
-2. A `.md`-formatted PR summary that includes a Release Please override block.
+1. A proper conventional commit message (without ticket-prefix format).
+2. A `.md`-formatted PR summary that fills the repository PR template and includes a Release Please override block when relevant.
+3. A short manual publish note that keeps tag and package version aligned.
 
 ## When to Use
 
@@ -20,10 +21,23 @@ Use this skill when implementation work is done and the user asks for:
 - PR summary generation,
 - release-note-ready completion text,
 - Release Please override text.
+- manual publish checklist text.
+
+## Current Pipeline Assumptions
+
+This skill assumes the repository currently uses:
+
+- `build.yaml` for CI quality checks.
+- `pr-title-convention.yaml` for PR title validation.
+- `release-please.yaml` as manual-only (`workflow_dispatch`) for changelog/version PR generation.
+- `publish-nuget.yaml` as manual-only (`workflow_dispatch`) with `tag` input.
+
+Important release rule:
+
+- Tag and package version must match (for example tag `v0.0.6` requires `Directory.Build.props` version `0.0.6` at that tagged commit).
 
 ## Required Inputs
 
-- Ticket number (for example `47`).
 - Commit type (`feat`, `feat!`, `fix`, `fix!`, `docs`, `test`, `refactor`, `chore`).
 - Short change subject.
 - Summary of what changed.
@@ -33,15 +47,19 @@ If any input is missing, infer from branch/issue context when possible. If not i
 
 ## Output 1: Commit Message
 
-Use this exact header format:
+Use conventional commit format (no `RPS-<id>` prefix):
 
-`RPS-<ticket-number> <type>: <subject>`
+`<type>: <subject>`
+
+or, when scope is useful:
+
+`<type>(<scope>): <subject>`
 
 Examples:
 
-- `RPS-47 feat: add DI initialization examples`
-- `RPS-47 feat!: rename module contracts for consistency`
-- `RPS-47 docs: expand README module documentation`
+- `feat: add DI initialization examples`
+- `feat!: rename module contracts for consistency`
+- `docs(readme): expand module documentation`
 
 Rules:
 
@@ -51,24 +69,32 @@ Rules:
 
 ## Output 2: PR Summary Markdown
 
-Create a single Markdown document containing:
+Always fill the repository PR template structure.
 
-- `## Title`
-- `## Summary`
-- `## What Changed`
-- `## Testing`
-- `## API Impact`
-- `## Release Please Override`
+Create a single Markdown document containing these sections in this order:
 
-The override section must contain this exact block format:
+- `# Summary`
+- `# Validation`
+- `# Release Please Override (Required for releasable changes)`
+- `# Manual NuGet Publish`
+
+Inside `# Summary`, include:
+
+- change intent
+- what changed
+- API impact (if any)
+
+If the change should be releasable through Release Please, include this exact block format:
 
 ```text
 BEGIN_COMMIT_OVERRIDE
-feat!: expand SDK initialization/module documentation and add runnable basic usage examples
+fix: short conventional summary
 END_COMMIT_OVERRIDE
 ```
 
 Replace only the middle line with the correct conventional commit for the current PR. Keep `BEGIN_COMMIT_OVERRIDE` and `END_COMMIT_OVERRIDE` unchanged.
+
+If the PR is docs/chore/test/refactor-only and should not affect release semantics, explicitly state that override is optional and omitted by default.
 
 ## Release Please Mapping Rule
 
@@ -76,18 +102,29 @@ Replace only the middle line with the correct conventional commit for the curren
   - `feat:`, `fix:`, `feat!:`, or `fix!:`.
 - For non-releasable-only changes (`docs`, `chore`, `test`, `refactor`), still provide the section but explicitly state no override is required unless the team wants release-note inclusion.
 
+## Manual NuGet Publish Guidance (Required in PR Summary)
+
+Always include a short checklist:
+
+1. Confirm `Directory.Build.props` version equals intended release version.
+2. Create matching tag `v<version>` on that exact commit.
+3. Run `Publish NuGet` workflow manually with that tag.
+4. Verify package version appears on NuGet.
+
 ## Default Output File
 
 Unless the user specifies another path, write:
 
-`docs/pr-completion-RPS-<ticket-number>.md`
+`docs/pr-completion.md`
 
 ## Quality Checklist
 
 Before finalizing, verify:
 
-- Commit message matches `RPS-<id> <type>: <subject>`.
+- Commit message matches conventional format (`<type>: <subject>` or `<type>(<scope>): <subject>`), without ticket prefix.
 - PR summary is valid Markdown.
+- PR summary follows the repository PR template section structure exactly.
 - Override block exists and uses exact delimiters.
 - Override conventional line matches intended SemVer impact.
 - Testing section contains at least one concrete command/result.
+- Manual publish note is present and enforces tag/version match.

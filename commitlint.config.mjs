@@ -2,8 +2,8 @@ export default {
   defaultIgnores: true,
   parserPreset: {
     parserOpts: {
-      headerPattern: /^(RPS-\d+)\s([a-z]+)(?:\(([a-z0-9-]+)\))?(!?):\s(.+)$/,
-      headerCorrespondence: ["ticket", "type", "scope", "breaking", "subject"]
+      headerPattern: /^([a-z]+)(?:\(([a-z0-9-]+)\))?(!?):\s(.+)$/,
+      headerCorrespondence: ["type", "scope", "breaking", "subject"]
     }
   },
   ignores: [

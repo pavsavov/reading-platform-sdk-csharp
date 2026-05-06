@@ -74,3 +74,4 @@ Before finishing, ensure:
 - coverage includes success, failure, and edge scenarios
 - assertions are clear and deterministic
 - no required library (`xUnit`, `AwesomeAssertions`, `NSubstitute`, `Bogus`) is missing
+- test coverage is at least 80% of new code
