@@ -18,9 +18,11 @@ jobs:
 
       - name: Grace-period notice
         run: |
-          echo "Commit ticket lint is currently warning-only."
+          echo "Conventional commit lint is currently warning-only."
           echo "Hard enforcement starts on 2026-05-17."
-          echo "Required format: RPS-123 docs: short description"
+          echo "Required format: type: short description"
+          echo "Scoped format: type(scope): short description"
+          echo "Breaking format: type!: short description"
 
       - name: Validate commit messages
         uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed # v6.2.1

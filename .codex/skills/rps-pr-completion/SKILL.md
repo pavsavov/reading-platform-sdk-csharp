@@ -1,6 +1,6 @@
 ---
 name: rps-pr-completion
-description: Generate final PR completion artifacts for this repo, including ticket-prefixed commit messages, PR summary markdown, Release Please override guidance, and manual tag-based NuGet publish notes.
+description: Generate final PR completion artifacts for this repo, including PR-template-ready summary markdown, conventional commit messages, Release Please override guidance, and manual tag-based NuGet publish notes.
 ---
 
 # rps-pr-completion
@@ -9,8 +9,8 @@ description: Generate final PR completion artifacts for this repo, including tic
 
 Produce final delivery artifacts for a completed ticket:
 
-1. A proper commit message using the repository ticket format.
-2. A `.md`-formatted PR summary that includes a Release Please override block.
+1. A proper conventional commit message (without ticket-prefix format).
+2. A `.md`-formatted PR summary that fills the repository PR template and includes a Release Please override block when relevant.
 3. A short manual publish note that keeps tag and package version aligned.
 
 ## When to Use
@@ -38,7 +38,6 @@ Important release rule:
 
 ## Required Inputs
 
-- Ticket number (for example `47`).
 - Commit type (`feat`, `feat!`, `fix`, `fix!`, `docs`, `test`, `refactor`, `chore`).
 - Short change subject.
 - Summary of what changed.
@@ -48,15 +47,19 @@ If any input is missing, infer from branch/issue context when possible. If not i
 
 ## Output 1: Commit Message
 
-Use this exact header format:
+Use conventional commit format (no `RPS-<id>` prefix):
 
-`RPS-<ticket-number> <type>: <subject>`
+`<type>: <subject>`
+
+or, when scope is useful:
+
+`<type>(<scope>): <subject>`
 
 Examples:
 
-- `RPS-47 feat: add DI initialization examples`
-- `RPS-47 feat!: rename module contracts for consistency`
-- `RPS-47 docs: expand README module documentation`
+- `feat: add DI initialization examples`
+- `feat!: rename module contracts for consistency`
+- `docs(readme): expand module documentation`
 
 Rules:
 
@@ -66,15 +69,20 @@ Rules:
 
 ## Output 2: PR Summary Markdown
 
-Create a single Markdown document containing:
+Always fill the repository PR template structure.
 
-- `## Title`
-- `## Summary`
-- `## What Changed`
-- `## Testing`
-- `## API Impact`
-- `## Release Please Override`
-- `## Manual NuGet Publish`
+Create a single Markdown document containing these sections in this order:
+
+- `# Summary`
+- `# Validation`
+- `# Release Please Override (Required for releasable changes)`
+- `# Manual NuGet Publish`
+
+Inside `# Summary`, include:
+
+- change intent
+- what changed
+- API impact (if any)
 
 If the change should be releasable through Release Please, include this exact block format:
 
@@ -107,14 +115,15 @@ Always include a short checklist:
 
 Unless the user specifies another path, write:
 
-`docs/pr-completion-RPS-<ticket-number>.md`
+`docs/pr-completion.md`
 
 ## Quality Checklist
 
 Before finalizing, verify:
 
-- Commit message matches `RPS-<id> <type>: <subject>`.
+- Commit message matches conventional format (`<type>: <subject>` or `<type>(<scope>): <subject>`), without ticket prefix.
 - PR summary is valid Markdown.
+- PR summary follows the repository PR template section structure exactly.
 - Override block exists and uses exact delimiters.
 - Override conventional line matches intended SemVer impact.
 - Testing section contains at least one concrete command/result.

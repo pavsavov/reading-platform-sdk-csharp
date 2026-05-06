@@ -9,7 +9,8 @@ Describe what this PR changes and why.
 
 # Release Please Override (Required for releasable changes)
 
-This repository keeps PR/commit titles in `RPS-<id> type: subject` format.  
+This repository keeps PR titles in ticket-prefixed format where ticket id comes from branch name (for example `feature/RPS-21` -> `RPS-21 ...`).  
+Use `RPS-<ticket> type: subject` or `RPS-<ticket> type(scope): subject`.  
 If this PR should trigger a Release Please release PR, add one override block below.
 
 Use one of these prefixes in the override line:

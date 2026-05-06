@@ -26,13 +26,13 @@ Do not manually:
 
 ## Commit convention (required)
 
-This repository requires ticket-prefixed commit messages.
+This repository requires conventional commit messages.
 
 Use this commit format:
 
-- `RPS-<number> type: short description`
-- optional scope: `RPS-<number> type(scope): short description`
-- optional breaking marker: `RPS-<number> type(scope)!: short description`
+- `type: short description`
+- optional scope: `type(scope): short description`
+- optional breaking marker: `type(scope)!: short description`
 
 Supported types:
 
@@ -46,15 +46,15 @@ Supported types:
 
 Examples:
 
-- `RPS-4 docs: update README examples`
-- `RPS-21 feat!: rename PublishingPlatformClient`
-- `RPS-8 fix(api): handle null API response`
-- `RPS-11 chore(ci): adjust workflow permissions`
+- `docs: update README examples`
+- `feat!: rename PublishingPlatformClient`
+- `fix(api): handle null API response`
+- `chore(ci): adjust workflow permissions`
 
 These will fail:
 
-- `docs: update README examples` (missing ticket)
-- `RPS-4 update README examples` (missing type and colon)
+- `RPS-4 docs: update README examples` (ticket prefix no longer allowed)
+- `update README examples` (missing type and colon)
 
 Release automation commits are exempt from this rule:
 
@@ -62,15 +62,16 @@ Release automation commits are exempt from this rule:
 
 ## PR title convention (required)
 
-PR titles must use ticket-first format:
+PR titles must include the ticket id from the source branch name.
 
 - `RPS-<number> type: short description`
 - optional scope: `RPS-<number> type(scope): short description`
 - breaking changes: `RPS-<number> type!: short description`
+- the `RPS-<number>` in title must match the ticket in branch name (for example `feature/RPS-21`)
 
 Examples:
 
-- `RPS-4 feat: add release workflow`
+- `RPS-21 feat: add release workflow`
 - `RPS-21 docs: update contribution guide`
 
 ## Versioning and changelog
@@ -152,4 +153,4 @@ Trusted publishing requirements:
 - Require CI checks before merge.
 - Require squash merge.
 - Enable "Default to PR title for squash merge commits."
-- Keep PR titles in `RPS-<number> type: ...` format.
+- Keep PR titles in `RPS-<number> type: ...` or `RPS-<number> type(scope): ...` format.
