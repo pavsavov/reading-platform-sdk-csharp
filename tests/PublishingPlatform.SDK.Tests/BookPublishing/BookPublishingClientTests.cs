@@ -175,6 +175,207 @@ public sealed class BookPublishingClientTests
         ex.Which.Message.Should().Contain("Book publishing status payload was empty");
     }
 
+    [Fact]
+    public async Task DefaultErrorMapper_Maps404ToBookNotFound_ForPublish()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = JsonContent.Create(new { Message = "missing" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.PublishAsync("book-404", new PublishBookRequest());
+
+        _ = await act.Should().ThrowAsync<BookNotFoundException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps409ToBookConflict_ForPublish()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.Conflict)
+        {
+            Content = JsonContent.Create(new { Message = "conflict" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.PublishAsync("book-409", new PublishBookRequest());
+
+        _ = await act.Should().ThrowAsync<BookConflictException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps429ToBookRateLimited_ForPublish()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage((HttpStatusCode)429)
+        {
+            Content = JsonContent.Create(new { Message = "too many requests" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.PublishAsync("book-429", new PublishBookRequest());
+
+        _ = await act.Should().ThrowAsync<BookRateLimitedException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps404ToBookNotFound_ForUnpublish()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = JsonContent.Create(new { Message = "missing" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.UnpublishAsync("book-404");
+
+        _ = await act.Should().ThrowAsync<BookNotFoundException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps409ToBookConflict_ForUnpublish()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.Conflict)
+        {
+            Content = JsonContent.Create(new { Message = "conflict" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.UnpublishAsync("book-409");
+
+        _ = await act.Should().ThrowAsync<BookConflictException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps429ToBookRateLimited_ForUnpublish()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage((HttpStatusCode)429)
+        {
+            Content = JsonContent.Create(new { Message = "too many requests" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.UnpublishAsync("book-429");
+
+        _ = await act.Should().ThrowAsync<BookRateLimitedException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps404ToBookNotFound_ForSchedule()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = JsonContent.Create(new { Message = "missing" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.ScheduleAsync("book-404", new ScheduleBookPublishingRequest
+        {
+            ScheduledAt = DateTimeOffset.Parse("2026-06-01T10:00:00Z"),
+        });
+
+        _ = await act.Should().ThrowAsync<BookNotFoundException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps409ToBookConflict_ForSchedule()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.Conflict)
+        {
+            Content = JsonContent.Create(new { Message = "conflict" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.ScheduleAsync("book-409", new ScheduleBookPublishingRequest
+        {
+            ScheduledAt = DateTimeOffset.Parse("2026-06-01T10:00:00Z"),
+        });
+
+        _ = await act.Should().ThrowAsync<BookConflictException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps429ToBookRateLimited_ForSchedule()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage((HttpStatusCode)429)
+        {
+            Content = JsonContent.Create(new { Message = "too many requests" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.ScheduleAsync("book-429", new ScheduleBookPublishingRequest
+        {
+            ScheduledAt = DateTimeOffset.Parse("2026-06-01T10:00:00Z"),
+        });
+
+        _ = await act.Should().ThrowAsync<BookRateLimitedException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps404ToBookNotFound_ForGetStatus()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = JsonContent.Create(new { Message = "missing" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.GetStatusAsync("book-404");
+
+        _ = await act.Should().ThrowAsync<BookNotFoundException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps409ToBookConflict_ForGetStatus()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.Conflict)
+        {
+            Content = JsonContent.Create(new { Message = "conflict" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.GetStatusAsync("book-409");
+
+        _ = await act.Should().ThrowAsync<BookConflictException>();
+    }
+
+    [Fact]
+    public async Task DefaultErrorMapper_Maps429ToBookRateLimited_ForGetStatus()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage((HttpStatusCode)429)
+        {
+            Content = JsonContent.Create(new { Message = "too many requests" }),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookPublishingClient(transport);
+
+        var act = async () => await sut.GetStatusAsync("book-429");
+
+        _ = await act.Should().ThrowAsync<BookRateLimitedException>();
+    }
+
     private sealed class SingleResponseHandler : HttpMessageHandler
     {
         private readonly HttpResponseMessage _response;
