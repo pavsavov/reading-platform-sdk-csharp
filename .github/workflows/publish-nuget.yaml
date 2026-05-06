@@ -44,6 +44,20 @@ jobs:
       - name: Pack
         run: dotnet pack ./src/PublishingPlatform.SDK/PublishingPlatform.SDK.csproj --configuration Release --no-build --output ./artifacts
 
+      - name: Validate tag and package version match
+        shell: bash
+        run: |
+          TAG_VERSION="${TARGET_REF#v}"
+          PACKAGE_VERSION=$(grep -oPm1 '(?<=<Version>)[^<]+' Directory.Build.props)
+
+          echo "Tag version: $TAG_VERSION"
+          echo "Package version: $PACKAGE_VERSION"
+
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "Tag/version mismatch. TARGET_REF=$TARGET_REF but Directory.Build.props has $PACKAGE_VERSION" >&2
+            exit 1
+          fi
+
       - name: Validate NuGet user is configured
         if: ${{ env.NUGET_USER == '' }}
         run: |

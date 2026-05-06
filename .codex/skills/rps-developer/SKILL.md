@@ -218,6 +218,49 @@ permissions:
   - provider-specific names must stay internal only.
 - Avoid exposing `*Dto` types as public SDK contracts.
 
+## Magic Strings and Constants Policy (Mandatory)
+
+- Do not leave repeated business-significant string literals inline ("magic strings").
+- Default placement rule: keep constants as close as possible to usage.
+  - Use `private const` (or `private static readonly` when `const` is not possible) when a value is used in only one class/file.
+- Promote to shared constants only when the same value is used across multiple classes or modules.
+  - Shared constants must be grouped by domain/type (for example headers, routes, claim names, error codes), not in a single global "Constants" dump file.
+- Configuration-like values must not be hardcoded constants.
+  - Use `appsettings` + `IOptions<T>` for values expected to vary by environment, deployment, or tenant.
+- Prefer stronger typing over string literals when modeling bounded value sets.
+  - Use enums, dedicated value objects, or typed wrappers for domain states/codes.
+- Prefer `nameof(...)` for member/parameter/property names instead of hardcoded identifier strings.
+- If introducing a new shared constant group, name it by intent and scope (for example `HeaderNames`, `ClaimTypes`, `ErrorCodes`) and keep it cohesive.
+
+Anti-patterns (must avoid):
+
+- One catch-all `Constants.cs` containing unrelated values.
+- Duplicating the same literal across multiple files.
+- Hardcoded environment/configuration values in production code.
+
+## URL Construction Policy (Mandatory)
+
+- Do not scatter full URL string literals across the codebase.
+- Base URLs are configuration, not constants:
+  - Store host/base address in `appsettings` and bind via `IOptions<TOptions>`.
+- Keep route definitions close to the consuming domain/client.
+  - Group endpoint templates by responsibility (for example `BooksEndpoints`, `UsersEndpoints`), not in a global endpoints file.
+- For parameterized routes, use typed builder methods instead of ad-hoc string concatenation.
+  - Example pattern: `ById(string id)`, `Chapters(string id, int chapter)`.
+- Always encode dynamic path segments using `Uri.EscapeDataString(...)`.
+- Build absolute URIs via `Uri` composition (base + relative), not manual slash-joining.
+- Build query strings with a dedicated helper/builder (for example `QueryHelpers`, `FormUrlEncodedContent`, or a small internal query builder), not manual `"&"` concatenation.
+- Omit optional query parameters when values are null/empty/default unless the external API contract explicitly requires sending them.
+- Keep endpoint route constants/methods internal unless explicitly needed by public SDK contracts.
+- Route builders must stay transport-focused and must not contain business validation logic.
+
+Anti-patterns (must avoid):
+
+- `string` concatenation for full URLs (`base + "/" + path + "?" + ...`).
+- Repeating the same route fragments in multiple classes.
+- Leaving dynamic path values unencoded.
+- Mixing route construction and domain-policy branching in the same method/class.
+
 ## XML Documentation Requirement
 
 - Add XML documentation comments to all classes, interfaces, properties, and members (private and public).
