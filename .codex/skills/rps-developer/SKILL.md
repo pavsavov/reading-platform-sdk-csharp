@@ -15,8 +15,93 @@ Use this skill when implementing or refactoring production SDK code, public abst
 
 ## Required First Step
 
-- Before starting implementation work, request a ticket from GitHub using the installed GitHub plugin in Codex.
-- Treat the ticket as the authoritative work item for scope, tracking, and commit/PR linkage.
+- Use the user-provided task/ticket context as the authoritative work item for scope and implementation decisions.
+- For security/governance policy, rely on this skill's embedded baseline (Ticket #22 and #23 content below) without performing GitHub lookups.
+- Query GitHub only when the user explicitly asks, or when a different ticket is required and not already embedded in this skill.
+- Preserve ticket linkage in commit/PR metadata when a ticket id is available.
+
+## Mandatory Security and Governance Baseline
+
+- The policy in this section is a direct embedded baseline from Ticket #22 and Ticket #23 and is non-optional for all SDK development.
+
+### Core Security Principles (Ticket #23)
+
+- Secure by default.
+- Opt-in diagnostics.
+- No embedded secrets.
+- Least privilege.
+- Assume code is inspectable/decompilable.
+- Prefer server-side enforcement over client trust.
+
+### Required Controls ()
+
+- Secrets management:
+  - Never store, hardcode, or embed secrets in SDK code, tests, examples, fixtures, docs, or pipelines.
+  - Consumer credentials must come from secure external configuration (environment variables/secret managers).
+- Logging and diagnostics:
+  - Diagnostics are disabled by default.
+  - Diagnostics are explicitly enabled by consumers.
+  - Sensitive data is excluded by default and included only by explicit opt-in.
+  - Never log by default: API keys/tokens, auth headers, content payloads, download URLs, user/customer identifiers.
+- Transport security:
+  - Enforce HTTPS-only communication.
+  - Reject insecure `http://` base URLs at runtime.
+  - Example enforcement:
+```csharp
+if (options.BaseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException("HTTPS is required.");
+}
+```
+- Correlation and tracing:
+  - Support correlation IDs on requests for observability (`X-Correlation-Id`).
+- Idempotency for mutating operations:
+  - Support idempotency keys for retry-safe publish/upload operations to prevent duplication.
+- Input validation:
+  - Validate required inputs before API calls and fail fast with explicit argument errors.
+- Error handling:
+  - Use strongly typed exceptions that include structured context (status code, error code, request id where applicable).
+- CI/CD security:
+  - Pipeline must include build, unit tests, dependency vulnerability checks, static analysis, and docs validation.
+  - Use least-privilege GitHub Actions permissions by default:
+```yaml
+permissions:
+  contents: read
+```
+  - Escalate permissions only for jobs that truly require it (for example release publishing).
+- Package security:
+  - Publish packages only from CI/CD, not local machines.
+  - Keep release credentials in secure CI secret stores only.
+  - Consider signing packages where feasible.
+- Dependency security:
+  - Run vulnerability checks regularly (for example `dotnet list package --vulnerable`).
+- Security boundary principle:
+  - Do not rely on SDK secrecy/obfuscation as primary protection.
+  - Backend API is the real security boundary and must enforce authentication, authorization, rate limits, and data access control.
+
+### Distribution and Debug Surface Hardening ()
+
+- Objective:
+  - Reduce source visibility and debugger stepping surface for external SDK consumers.
+  - Recognize the hard limit: .NET assemblies are inspectable; complete prevention is impossible.
+- Distribution policy:
+  - Keep repository private.
+  - Distribute only NuGet artifacts (`.nupkg`) unless explicitly overridden by user decision.
+- Artifact exposure policy:
+  - Do not publish symbols/source artifacts by default (`.snupkg`, `.pdb`, SourceLink).
+- Packaging hardening defaults (must remain enabled unless explicitly approved override):
+```xml
+<PropertyGroup>
+  <DebugType>none</DebugType>
+  <DebugSymbols>false</DebugSymbols>
+  <PublishRepositoryUrl>false</PublishRepositoryUrl>
+  <EmbedUntrackedSources>false</EmbedUntrackedSources>
+</PropertyGroup>
+```
+- Debugger stepping hardening:
+  - Review sensitive implementation classes and apply `[DebuggerStepThrough]` or `[DebuggerNonUserCode]` where appropriate.
+- Documentation truthfulness:
+  - Documentation must state the inspection limits clearly (cannot fully prevent reverse inspection/decompilation).
 
 ## Mandatory Quality Baseline
 
@@ -262,6 +347,22 @@ public sealed class PublishingRequestBuilder
 
 - API/contract impact reviewed:
   - Confirm whether public interfaces, signatures, models, defaults, or exception contracts changed.
+- Security/governance baseline reviewed:
+  - Embedded Ticket #22 and #23 controls were applied or explicitly exception-noted.
+  - Security principles are preserved: secure-by-default, opt-in diagnostics, no secrets, least privilege, inspectable-code assumption, backend enforcement.
+  - No secrets are embedded in SDK code, test assets, docs, or pipelines.
+  - HTTPS-only transport enforcement preserved for SDK communication.
+  - Diagnostics remain opt-in and sensitive-data-safe by default.
+  - Correlation id and idempotency support were preserved where mutating/traceable flows are touched.
+  - Strong input validation and typed exception behavior were preserved for changed flows.
+  - Backend-enforcement principle preserved (no client-side secrecy assumptions).
+  - CI/CD security gates include vulnerability/static-analysis coverage for affected changes.
+  - Workflow/job permissions follow least privilege by default.
+  - NuGet publishing path remains CI/CD-only and secret-safe.
+  - Dependency vulnerability posture reviewed for affected dependency changes.
+  - Package/source visibility policy remains hardened by default (`.nupkg` distribution, no symbol/source artifacts by default).
+  - Sensitive classes touched by the change were reviewed for debugger-step surface hardening.
+  - Documentation still states decompilation/inspection limits truthfully.
 - Architecture responsibility budget reviewed:
   - Each changed class has exactly one declared primary responsibility.
   - Any multi-bucket behavior has been extracted or exception-noted.
@@ -284,6 +385,7 @@ public sealed class PublishingRequestBuilder
   - Architecture seam tests included where collaborators were introduced.
 - Docs and release alignment complete:
   - `README.md` updated when consumer-relevant patterns/decisions changed.
+  - Security/distribution guidance updated when packaging or diagnostics behavior changes.
   - Customer-facing changes expressed in Release Please-compatible commit/PR metadata.
   - Example `.csx` added/updated for each newly exposed public client.
 - Policy compliance complete:
@@ -292,6 +394,7 @@ public sealed class PublishingRequestBuilder
   - No new dependency without explicit consent.
   - One class per file preserved.
   - REST-oriented client behavior preserved.
+  - Packaging hardening and symbol/source exposure policy preserved unless explicitly approved override.
 
 ## Out-of-Scope Guardrails
 
