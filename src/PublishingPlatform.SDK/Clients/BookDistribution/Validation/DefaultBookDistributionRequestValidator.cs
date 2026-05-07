@@ -34,12 +34,9 @@ internal sealed class DefaultBookDistributionRequestValidator : IBookDistributio
             throw new BookValidationException("At least one distribution channel is required.");
         }
 
-        foreach (var channel in request.Channels)
+        if (request.Channels.Any(string.IsNullOrWhiteSpace))
         {
-            if (string.IsNullOrWhiteSpace(channel))
-            {
-                throw new BookValidationException("Distribution channels cannot contain empty values.");
-            }
+            throw new BookValidationException("Distribution channels cannot contain empty values.");
         }
     }
 }
