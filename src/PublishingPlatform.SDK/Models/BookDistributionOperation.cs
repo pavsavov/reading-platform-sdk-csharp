@@ -18,7 +18,7 @@ public sealed class BookDistributionOperation
     /// <summary>
     /// Gets or sets the distribution status.
     /// </summary>
-    public DistributionStatus Status { get; set; } = DistributionStatus.Unknown;
+    public string Status { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the operation start timestamp.
