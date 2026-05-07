@@ -8,7 +8,7 @@ internal interface ITransportErrorContextFactory
         HttpMethod method,
         string relativePath,
         int statusCode,
-        string message,
+        NormalizedTransportError error,
         string? correlationId,
         string? operationName);
 }

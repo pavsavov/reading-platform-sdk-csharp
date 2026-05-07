@@ -7,7 +7,7 @@ The SDK centralizes error handling so consumers get consistent failures across a
 All shared HTTP calls pass through the internal transport. When the API returns a non-success HTTP status code, the transport:
 
 1. Reads the response body as a structured transport error payload when possible.
-2. Falls back to a generic message when the body is missing, malformed, or not JSON.
+2. Falls back to normalized message and error-code defaults when the body is missing, malformed, or not JSON.
 3. Creates a `PublishingPlatformErrorContext`.
 4. Throws the exception returned by `IPublishingPlatformErrorMapper`.
 
@@ -17,9 +17,19 @@ The error context includes:
 - `RelativePath`
 - `StatusCode`
 - `Message`
+- `ErrorCode`
+- `RequestId`
 - `CorrelationId`
+- `OperationName`
 
-The default mapper returns an `ApiException` that includes the HTTP status code and normalized message.
+The default mapper returns exceptions that derive from `PublishingPlatformApiException`, including `ApiException` for generic API failures and book-specific exceptions for known book-centric failure categories. These exceptions preserve the HTTP status code, normalized error code, request ID, correlation ID, operation name, method, path, and message.
+
+Book-centric modules include `Books`, `BookContent`, `BookPublishing`, `BookDistribution`, `BookAccess`, `BookAnalytics`, and `BookAuditLogs`. For these modules, the default mapper returns:
+
+- `BookNotFoundException` for `404`
+- `BookConflictException` for `409` and `412`
+- `BookRateLimitedException` for `429`
+- `ApiException` for other HTTP failures
 
 ## Fallback Messages
 
@@ -29,13 +39,15 @@ If the response body does not contain a usable error message, the SDK returns a 
 HTTP {statusCode} returned by Publishing Platform API.
 ```
 
+If the response body does not contain a usable error code, the SDK uses `http_{statusCode}`.
+
 This avoids exposing raw, unstructured response bodies while still giving consumers enough information to understand the failure category.
 
 ## Custom Error Mapping
 
 Consumers can provide a custom `IPublishingPlatformErrorMapper` through `PublishingPlatformClientOptions` or `PublishingPlatformClientBuilder.WithErrorMapper`.
 
-Custom mappers should use `PublishingPlatformErrorContext` to convert API failures into application-specific exceptions. They should preserve important context such as status code, request path, method, and correlation ID.
+Custom mappers should use `PublishingPlatformErrorContext` to convert API failures into application-specific exceptions. They should preserve important context such as status code, normalized error code, request ID, request path, method, operation name, and correlation ID.
 
 ## Cancellation
 

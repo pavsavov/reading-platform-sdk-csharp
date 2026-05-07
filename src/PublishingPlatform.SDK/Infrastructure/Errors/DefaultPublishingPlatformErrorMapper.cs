@@ -3,40 +3,120 @@ using PublishingPlatform.SDK.Exceptions;
 
 namespace PublishingPlatform.SDK.Infrastructure.Errors;
 
+/// <summary>
+/// Maps normalized Publishing Platform API failures to SDK exception types.
+/// </summary>
 internal sealed class DefaultPublishingPlatformErrorMapper : IPublishingPlatformErrorMapper
 {
+    private static readonly string[] BookCentricOperationPrefixes =
+    [
+        "Books",
+        "BookContent",
+        "BookPublishing",
+        "BookDistribution",
+        "BookAccess",
+        "BookAnalytics",
+        "BookAuditLogs",
+    ];
+
     public Exception Map(PublishingPlatformErrorContext context)
     {
-        if (context.RelativePath.StartsWith("/books", StringComparison.OrdinalIgnoreCase))
+        if (IsBookCentric(context))
         {
-            if (context.StatusCode == 404)
+            var bookId = ExtractBookId(context.RelativePath);
+            return context.StatusCode switch
             {
-                return new BookNotFoundException(ExtractBookId(context.RelativePath), context.Message);
-            }
+                404 => new BookNotFoundException(bookId, context),
+                409 or 412 => new BookConflictException(bookId, context),
+                429 => new BookRateLimitedException(context),
+                _ => new ApiException(context),
+            };
+        }
 
-            if (context.StatusCode is 409 or 412)
-            {
-                return new BookConflictException(ExtractBookId(context.RelativePath), context.Message);
-            }
+        return new ApiException(context);
+    }
 
-            if (context.StatusCode == 429)
+    private static bool IsBookCentric(PublishingPlatformErrorContext context)
+    {
+        if (StartsWithOperationPrefix(context.OperationName, "Webhooks"))
+        {
+            return false;
+        }
+
+        foreach (var prefix in BookCentricOperationPrefixes)
+        {
+            if (StartsWithOperationPrefix(context.OperationName, prefix))
             {
-                return new BookRateLimitedException(context.Message);
+                return true;
             }
         }
 
-        return ErrorMapper.Map(context.StatusCode, context.Message);
+        if (StartsWithBookCentricPath(context.RelativePath))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool StartsWithBookCentricPath(string relativePath)
+    {
+        var path = GetPathWithoutQuery(relativePath);
+        return path.StartsWith("/books", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/book-access", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/book-analytics", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/book-audit-logs", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool StartsWithOperationPrefix(string? operationName, string prefix)
+    {
+        return operationName is not null
+            && (operationName.Equals(prefix, StringComparison.OrdinalIgnoreCase)
+                || (operationName.Length > prefix.Length
+                    && operationName[prefix.Length] == '.'
+                    && operationName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)));
     }
 
     private static string ExtractBookId(string relativePath)
     {
-        var path = relativePath.Trim('/');
+        var path = GetPathWithoutQuery(relativePath).Trim('/');
         var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length < 2)
+        if (segments.Length >= 2 && segments[0].Equals("books", StringComparison.OrdinalIgnoreCase))
         {
-            return string.Empty;
+            return Uri.UnescapeDataString(segments[1]);
         }
 
-        return segments[1];
+        return ExtractQueryValue(relativePath, "bookId") ?? string.Empty;
+    }
+
+    private static string GetPathWithoutQuery(string relativePath)
+    {
+        var queryStart = relativePath.IndexOf('?', StringComparison.Ordinal);
+        return queryStart < 0 ? relativePath : relativePath[..queryStart];
+    }
+
+    private static string? ExtractQueryValue(string relativePath, string key)
+    {
+        var queryStart = relativePath.IndexOf('?', StringComparison.Ordinal);
+        if (queryStart < 0 || queryStart == relativePath.Length - 1)
+        {
+            return null;
+        }
+
+        var query = relativePath[(queryStart + 1)..];
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separatorIndex = pair.IndexOf('=', StringComparison.Ordinal);
+            var candidateKey = separatorIndex < 0 ? pair : pair[..separatorIndex];
+            if (!Uri.UnescapeDataString(candidateKey).Equals(key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = separatorIndex < 0 ? string.Empty : pair[(separatorIndex + 1)..];
+            return Uri.UnescapeDataString(value);
+        }
+
+        return null;
     }
 }

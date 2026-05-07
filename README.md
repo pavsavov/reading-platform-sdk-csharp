@@ -462,7 +462,7 @@ builder.Services.AddPublishingPlatformClient(options =>
 
 ### Optional: custom error mapper
 
-Use a custom mapper to throw domain-specific exceptions with request context.
+Use a custom mapper to throw domain-specific exceptions with normalized request context.
 
 ```csharp
 using PublishingPlatform.SDK.Abstractions;
@@ -473,10 +473,12 @@ public sealed class PublishingErrorMapper : IPublishingPlatformErrorMapper
     {
         if (context.StatusCode == 404 && context.RelativePath.StartsWith("/books/", StringComparison.Ordinal))
         {
-            return new InvalidOperationException($"Book was not found. Path: {context.RelativePath}");
+        return new InvalidOperationException(
+            $"Book was not found. Code: {context.ErrorCode}. Request: {context.RequestId}. Path: {context.RelativePath}");
         }
 
-        return new Exception($"API call failed ({context.StatusCode}) for {context.Method} {context.RelativePath}: {context.Message}");
+    return new Exception(
+        $"API call failed ({context.StatusCode}, {context.ErrorCode}) for {context.Method} {context.RelativePath}: {context.Message}");
     }
 }
 
