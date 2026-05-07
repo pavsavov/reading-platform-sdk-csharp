@@ -5,6 +5,20 @@ info:
   description: |
     Implemented API contract aligned to the current SDK implementation
     on local branch feature/RPS-19.
+
+    Architecture contract notes:
+    - The SDK intentionally models deep book-lifecycle workflows before broader publishing domains.
+    - Module clients share one transport contract for correlation, resilience, diagnostics, and normalized errors.
+    - Public schemas are strict, platform-owned SDK models; provider-specific payloads stay internal.
+    - Non-idempotent retries require explicit opt-in and an idempotency key when replay is possible.
+    - Diagnostics default to privacy-preserving behavior and omit sensitive headers, payloads, and content.
+x-sdk-architecture-tradeoffs:
+  depthOverBreadth: Book lifecycle depth is prioritized over broad generic publishing coverage.
+  centralTransport: Shared transport consistency is favored over per-client HTTP pipeline variation.
+  typedModelStrictness: SDK-owned models are strict at the public boundary while status strings remain forward-compatible.
+  retryAndIdempotency: Retry defaults protect side-effecting operations unless idempotency is explicit.
+  diagnosticsPrivacy: Diagnostics are opt-in and redact sensitive request, response, and content data by default.
+  errorNormalization: API errors are normalized once at transport level before mapper-specific exceptions are produced.
 servers:
   - url: https://api.publisher-platform.dev
 security:

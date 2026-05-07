@@ -123,3 +123,29 @@ Future remote upload behavior can build on this local storage result, but it sho
 The SDK follows a Depth over Breadth strategy. The priority is to make the book lifecycle reliable and ergonomic before expanding into unrelated publishing domains.
 
 This means new modules should be added only when they support the core book lifecycle or a clear extension of it.
+
+## Explicit Tradeoffs
+
+### Depth Over Breadth
+
+The SDK prioritizes a complete book-lifecycle experience over a broad publishing API wrapper. Catalog metadata, content, publishing, distribution, access, analytics, audit logs, and webhooks form one coherent operational path. New domains should prove they support that path before becoming public modules.
+
+### Central Transport Over Per-Client Flexibility
+
+Every module uses the shared transport so HTTPS enforcement, authentication, correlation IDs, resilience, diagnostics, and error normalization behave the same way. This reduces per-client customization, but it keeps partner integrations predictable and prevents module-level drift.
+
+### Typed Model Strictness
+
+Public contracts are platform-owned SDK models rather than provider wire models. Request models validate obvious consumer mistakes before transport. Response models stay typed where the platform contract is stable, while server-grown values such as publishing and distribution statuses remain strings for forward compatibility.
+
+### Retry Defaults And Idempotency
+
+Retry behavior is disabled until consumers opt in. When enabled, idempotent methods are retried conservatively for transient failures. Non-idempotent methods require explicit opt-in and replay-safe request conditions, including an `Idempotency-Key` where the operation supports one.
+
+### Diagnostics Privacy Defaults
+
+Diagnostics are opt-in and privacy-preserving. Correlation IDs are safe to propagate, but API keys, authorization headers, idempotency keys, request and response bodies, uploaded book content, download URLs, and user/customer identifiers must stay out of default logs and traces.
+
+### Error Normalization
+
+The transport normalizes unsuccessful responses into a shared error context before the configured mapper creates exceptions. This keeps the public exception model consistent while allowing consumers to plug in domain-specific exception mapping.
