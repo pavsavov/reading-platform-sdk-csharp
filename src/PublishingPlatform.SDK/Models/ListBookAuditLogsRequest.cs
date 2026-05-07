@@ -44,4 +44,9 @@ public sealed class ListBookAuditLogsRequest
     /// Gets or sets requested page size.
     /// </summary>
     public int PageSize { get; set; } = 50;
+
+    /// <summary>
+    /// Gets or sets an optional continuation token.
+    /// </summary>
+    public string? ContinuationToken { get; set; }
 }
