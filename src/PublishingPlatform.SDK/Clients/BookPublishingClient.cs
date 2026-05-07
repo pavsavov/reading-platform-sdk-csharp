@@ -1,10 +1,8 @@
-using System.Diagnostics;
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients.BookPublishing.Requests;
 using PublishingPlatform.SDK.Clients.BookPublishing.Serialization;
 using PublishingPlatform.SDK.Clients.BookPublishing.Validation;
-using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal;
 using PublishingPlatform.SDK.Models;
@@ -16,6 +14,11 @@ namespace PublishingPlatform.SDK.Clients;
 /// </summary>
 public sealed class BookPublishingClient : IBookPublishingClient
 {
+    private const string PublishOperationName = "BookPublishing.Publish";
+    private const string UnpublishOperationName = "BookPublishing.Unpublish";
+    private const string ScheduleOperationName = "BookPublishing.Schedule";
+    private const string GetStatusOperationName = "BookPublishing.GetStatus";
+
     private readonly ISharedHttpTransport _transport;
     private readonly IBookPublishingRequestValidator _validator;
     private readonly IBookPublishingRequestHeadersFactory _requestHeadersFactory;
@@ -49,7 +52,6 @@ public sealed class BookPublishingClient : IBookPublishingClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidatePublish(request);
 
-        using var activity = StartActivity("BookPublishing.Publish");
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(idempotencyKey);
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
@@ -57,7 +59,7 @@ public sealed class BookPublishingClient : IBookPublishingClient
             $"/books/{Uri.EscapeDataString(bookId)}/publishing/publish",
             content,
             headers,
-            "BookPublishing.Publish",
+            PublishOperationName,
             ct).ConfigureAwait(false);
 
         return await _responseReader.ReadStatusAsync(response, ct).ConfigureAwait(false);
@@ -68,14 +70,13 @@ public sealed class BookPublishingClient : IBookPublishingClient
     {
         _validator.ValidateBookId(bookId);
 
-        using var activity = StartActivity("BookPublishing.Unpublish");
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(idempotencyKey);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
             $"/books/{Uri.EscapeDataString(bookId)}/publishing/unpublish",
             null,
             headers,
-            "BookPublishing.Unpublish",
+            UnpublishOperationName,
             ct).ConfigureAwait(false);
 
         return await _responseReader.ReadStatusAsync(response, ct).ConfigureAwait(false);
@@ -88,7 +89,6 @@ public sealed class BookPublishingClient : IBookPublishingClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateSchedule(request);
 
-        using var activity = StartActivity("BookPublishing.Schedule");
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(idempotencyKey);
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
@@ -96,7 +96,7 @@ public sealed class BookPublishingClient : IBookPublishingClient
             $"/books/{Uri.EscapeDataString(bookId)}/publishing/schedule",
             content,
             headers,
-            "BookPublishing.Schedule",
+            ScheduleOperationName,
             ct).ConfigureAwait(false);
 
         return await _responseReader.ReadStatusAsync(response, ct).ConfigureAwait(false);
@@ -107,22 +107,14 @@ public sealed class BookPublishingClient : IBookPublishingClient
     {
         _validator.ValidateBookId(bookId);
 
-        using var activity = StartActivity("BookPublishing.GetStatus");
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
             $"/books/{Uri.EscapeDataString(bookId)}/publishing/status",
             null,
             null,
-            "BookPublishing.GetStatus",
+            GetStatusOperationName,
             ct).ConfigureAwait(false);
 
         return await _responseReader.ReadStatusAsync(response, ct).ConfigureAwait(false);
-    }
-
-    private static Activity? StartActivity(string operationName)
-    {
-        var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
-        activity?.SetTag("sdk.operation", operationName);
-        return activity;
     }
 }

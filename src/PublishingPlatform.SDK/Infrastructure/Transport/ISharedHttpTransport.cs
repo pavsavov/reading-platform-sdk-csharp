@@ -8,5 +8,6 @@ internal interface ISharedHttpTransport
         HttpContent? content,
         IReadOnlyDictionary<string, string>? headers = null,
         string? operationName = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? moduleName = null);
 }

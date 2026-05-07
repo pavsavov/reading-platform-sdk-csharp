@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PublishingPlatform.SDK.Exceptions;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients;
+using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Errors;
 using PublishingPlatform.SDK.Infrastructure.Http.Handlers;
 using PublishingPlatform.SDK.Infrastructure.Transport;
@@ -76,6 +78,11 @@ public static class ServiceCollectionExtensions
             return options.ErrorMapper ?? new DefaultPublishingPlatformErrorMapper();
         });
         services.AddSingleton<ICorrelationIdProvider, GuidCorrelationIdProvider>();
+        services.AddSingleton<IDiagnosticsOptionsResolver>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<PublishingPlatformClientOptions>>().Value;
+            return new DefaultDiagnosticsOptionsResolver(options);
+        });
         services.AddSingleton<HttpPipelinePolicy>();
         services.AddSingleton<ISharedHttpTransport>(sp =>
         {
@@ -83,11 +90,15 @@ public static class ServiceCollectionExtensions
             var pipeline = sp.GetRequiredService<IPublishingPlatformResiliencePipeline>();
             var correlationProvider = sp.GetRequiredService<ICorrelationIdProvider>();
             var errorMapper = sp.GetRequiredService<IPublishingPlatformErrorMapper>();
+            var diagnosticsResolver = sp.GetRequiredService<IDiagnosticsOptionsResolver>();
+            var logger = sp.GetService<ILogger<SharedHttpTransport>>();
             return SharedHttpTransportBuilder.Create()
                 .WithHttpClient(httpClient)
                 .WithResiliencePipeline(pipeline)
                 .WithCorrelationProvider(correlationProvider)
                 .WithErrorMapper(errorMapper)
+                .WithDiagnosticsOptionsResolver(diagnosticsResolver)
+                .WithLogger(logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<SharedHttpTransport>.Instance)
                 .Build();
         });
 
@@ -104,14 +115,25 @@ public static class ServiceCollectionExtensions
 
     private static bool ValidateOptions(PublishingPlatformClientOptions options)
     {
-        if (!Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out _))
+        if (!Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUri))
         {
             throw new PublishingPlatformConfigurationException("BaseUrl must be a valid absolute URL.");
+        }
+
+        if (baseUri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new PublishingPlatformConfigurationException("BaseUrl must use HTTPS.");
         }
 
         if (options.Timeout <= TimeSpan.Zero)
         {
             throw new PublishingPlatformConfigurationException("Timeout must be greater than zero.");
+        }
+
+        if (options.Diagnostics is not null
+            && string.IsNullOrWhiteSpace(options.Diagnostics.CorrelationHeaderName))
+        {
+            throw new PublishingPlatformConfigurationException("Diagnostics correlation header name must not be empty.");
         }
 
         return true;

@@ -9,6 +9,6 @@ internal interface ITransportErrorContextFactory
         string relativePath,
         int statusCode,
         string message,
-        string correlationId,
+        string? correlationId,
         string? operationName);
 }

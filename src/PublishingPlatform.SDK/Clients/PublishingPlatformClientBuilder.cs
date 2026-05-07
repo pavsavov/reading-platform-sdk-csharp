@@ -1,4 +1,5 @@
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Errors;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal.Resilience;
@@ -42,7 +43,13 @@ public sealed class PublishingPlatformClientBuilder
         var httpClient = SdkHttpClientResolver.Resolve(serviceProvider);
         var pipeline = _customPipeline ?? ResiliencePipelineFactory.Create(_options.Resilience);
         var errorMapper = _customErrorMapper ?? _options.ErrorMapper ?? new DefaultPublishingPlatformErrorMapper();
-        var transport = new SharedHttpTransport(httpClient, pipeline, new GuidCorrelationIdProvider(), errorMapper);
+        var transport = SharedHttpTransportBuilder.Create()
+            .WithHttpClient(httpClient)
+            .WithResiliencePipeline(pipeline)
+            .WithCorrelationProvider(new GuidCorrelationIdProvider())
+            .WithErrorMapper(errorMapper)
+            .WithDiagnosticsOptionsResolver(new DefaultDiagnosticsOptionsResolver(_options))
+            .Build();
 
         return PublishingPlatformClient.CreateFromTransport(transport);
     }

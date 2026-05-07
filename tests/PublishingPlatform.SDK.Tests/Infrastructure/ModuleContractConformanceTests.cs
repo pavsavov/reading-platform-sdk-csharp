@@ -1,8 +1,6 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Reflection;
-using System.Collections.Concurrent;
 using System.Text;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients;
@@ -118,20 +116,15 @@ public sealed class ModuleContractConformanceTests
     }
 
     [Fact]
-    public async Task ModuleMethods_EmitExpectedDiagnosticActivityAndOperationNames()
+    public async Task ModuleMethods_PassExpectedDiagnosticOperationNames()
     {
         var cases = BuildDiagnosticInvocationCases();
 
         foreach (var diagnosticCase in cases)
         {
             var transport = CreateSuccessfulTransport();
-            var startedActivities = new ConcurrentQueue<Activity>();
-            var stoppedActivities = new ConcurrentQueue<Activity>();
-            using var listener = CreatePublishingSdkActivityListener(startedActivities, stoppedActivities);
 
             await diagnosticCase.InvokeAsync(transport);
-            var startedSnapshot = startedActivities.ToArray();
-            var stoppedSnapshot = stoppedActivities.ToArray();
 
             await transport.Received(1).SendAsync(
                 Arg.Any<HttpMethod>(),
@@ -140,17 +133,6 @@ public sealed class ModuleContractConformanceTests
                 Arg.Any<IReadOnlyDictionary<string, string>?>(),
                 diagnosticCase.ExpectedOperationName,
                 Arg.Any<CancellationToken>());
-
-            startedSnapshot.Should().Contain(
-                activity => activity.OperationName == diagnosticCase.ExpectedOperationName,
-                $"{diagnosticCase.ScenarioName} should start the expected SDK activity");
-            stoppedSnapshot.Should().Contain(
-                activity => activity.OperationName == diagnosticCase.ExpectedOperationName,
-                $"{diagnosticCase.ScenarioName} should stop the expected SDK activity");
-            var startedActivity = startedSnapshot.First(activity => activity.OperationName == diagnosticCase.ExpectedOperationName);
-            startedActivity.Tags.Should().Contain(
-                tag => tag.Key == "sdk.operation" && tag.Value as string == diagnosticCase.ExpectedOperationName,
-                $"{diagnosticCase.ScenarioName} should stamp the sdk.operation diagnostic tag");
         }
     }
 
@@ -375,23 +357,6 @@ public sealed class ModuleContractConformanceTests
         {
             Content = JsonContent.Create(payload),
         };
-    }
-
-    private static ActivityListener CreatePublishingSdkActivityListener(
-        ConcurrentQueue<Activity> startedActivities,
-        ConcurrentQueue<Activity> stoppedActivities)
-    {
-        var listener = new ActivityListener
-        {
-            ShouldListenTo = activitySource => activitySource.Name == "PublishingPlatform.SDK",
-            Sample = static (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
-            SampleUsingParentId = static (ref ActivityCreationOptions<string> _) => ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStarted = activity => startedActivities.Enqueue(activity),
-            ActivityStopped = activity => stoppedActivities.Enqueue(activity),
-        };
-
-        ActivitySource.AddActivityListener(listener);
-        return listener;
     }
 
     private static DiagnosticInvocationCase[] BuildDiagnosticInvocationCases()

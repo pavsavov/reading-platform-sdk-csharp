@@ -9,7 +9,7 @@ internal sealed class DefaultTransportErrorContextFactory : ITransportErrorConte
         string relativePath,
         int statusCode,
         string message,
-        string correlationId,
+        string? correlationId,
         string? operationName)
     {
         return new PublishingPlatformErrorContext

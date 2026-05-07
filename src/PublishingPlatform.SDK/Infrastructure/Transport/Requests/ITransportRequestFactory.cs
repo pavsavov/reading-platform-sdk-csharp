@@ -6,6 +6,7 @@ internal interface ITransportRequestFactory
         HttpMethod method,
         string relativePath,
         HttpContent? content,
-        string correlationId,
+        string correlationHeaderName,
+        string? correlationId,
         IReadOnlyDictionary<string, string>? headers = null);
 }

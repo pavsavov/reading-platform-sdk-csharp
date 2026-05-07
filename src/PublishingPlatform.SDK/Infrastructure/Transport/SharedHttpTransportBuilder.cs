@@ -1,6 +1,10 @@
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Transport.Errors;
 using PublishingPlatform.SDK.Infrastructure.Transport.Requests;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using PublishingPlatform.SDK.Options;
 
 namespace PublishingPlatform.SDK.Infrastructure.Transport;
 
@@ -13,6 +17,9 @@ internal sealed class SharedHttpTransportBuilder
     private ITransportRequestFactory _requestFactory = new DefaultTransportRequestFactory();
     private ITransportResponseErrorReader _responseErrorReader = new DefaultTransportResponseErrorReader();
     private ITransportErrorContextFactory _errorContextFactory = new DefaultTransportErrorContextFactory();
+    private IDiagnosticsOptionsResolver _diagnosticsOptionsResolver =
+        new DefaultDiagnosticsOptionsResolver(new PublishingPlatformClientOptions());
+    private ILogger<SharedHttpTransport> _logger = NullLogger<SharedHttpTransport>.Instance;
 
     private SharedHttpTransportBuilder()
     {
@@ -65,6 +72,18 @@ internal sealed class SharedHttpTransportBuilder
         return this;
     }
 
+    public SharedHttpTransportBuilder WithDiagnosticsOptionsResolver(IDiagnosticsOptionsResolver diagnosticsOptionsResolver)
+    {
+        _diagnosticsOptionsResolver = diagnosticsOptionsResolver;
+        return this;
+    }
+
+    public SharedHttpTransportBuilder WithLogger(ILogger<SharedHttpTransport> logger)
+    {
+        _logger = logger;
+        return this;
+    }
+
     public SharedHttpTransport Build()
     {
         return new SharedHttpTransport(
@@ -74,6 +93,8 @@ internal sealed class SharedHttpTransportBuilder
             _errorMapper ?? throw new InvalidOperationException("Error mapper is required."),
             _requestFactory,
             _responseErrorReader,
-            _errorContextFactory);
+            _errorContextFactory,
+            _diagnosticsOptionsResolver,
+            _logger);
     }
 }

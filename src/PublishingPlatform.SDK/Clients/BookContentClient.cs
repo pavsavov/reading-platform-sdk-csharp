@@ -1,9 +1,7 @@
-using System.Diagnostics;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients.BookContent.Requests;
 using PublishingPlatform.SDK.Clients.BookContent.Serialization;
 using PublishingPlatform.SDK.Clients.BookContent.Validation;
-using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal;
 using PublishingPlatform.SDK.Models;
@@ -16,6 +14,9 @@ namespace PublishingPlatform.SDK.Clients;
 /// </summary>
 public sealed class BookContentClient : IBookContentClient
 {
+    private const string GetOperationName = "BookContent.Get";
+    private const string UploadOrReplaceOperationName = "BookContent.UploadOrReplace";
+
     private readonly ISharedHttpTransport _transport;
     private readonly IBookContentRequestValidator _validator;
     private readonly IBookContentRequestHeadersFactory _requestHeadersFactory;
@@ -51,13 +52,12 @@ public sealed class BookContentClient : IBookContentClient
     {
         _validator.ValidateBookId(bookId);
 
-        using var activity = StartActivity("BookContent.Get");
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
             $"/books/{Uri.EscapeDataString(bookId)}/content",
             null,
             null,
-            "BookContent.Get",
+            GetOperationName,
             ct).ConfigureAwait(false);
 
         return await _responseReader.ReadBookContentAsync(response, ct).ConfigureAwait(false);
@@ -70,7 +70,6 @@ public sealed class BookContentClient : IBookContentClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateUploadRequest(request);
 
-        using var activity = StartActivity("BookContent.UploadOrReplace");
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(request.IdempotencyKey);
         using var content = _multipartFormFactory.Create(request);
         using var response = await _transport.SendAsync(
@@ -78,16 +77,9 @@ public sealed class BookContentClient : IBookContentClient
             $"/books/{Uri.EscapeDataString(bookId)}/content",
             content,
             headers,
-            "BookContent.UploadOrReplace",
+            UploadOrReplaceOperationName,
             ct).ConfigureAwait(false);
 
         return await _responseReader.ReadBookContentAsync(response, ct).ConfigureAwait(false);
-    }
-
-    private static Activity? StartActivity(string operationName)
-    {
-        var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
-        activity?.SetTag("sdk.operation", operationName);
-        return activity;
     }
 }

@@ -179,9 +179,61 @@ public sealed class InfrastructureContractsTests
         var diagnostics = new DiagnosticsOptions();
         var pagination = new PaginationRequest();
 
-        diagnostics.EnableTracing.Should().BeTrue();
-        diagnostics.EnableMetrics.Should().BeTrue();
+        diagnostics.EnableLogging.Should().BeFalse();
+        diagnostics.EnableTracing.Should().BeFalse();
+        diagnostics.EnableMetrics.Should().BeFalse();
+        diagnostics.LogRequestBody.Should().BeFalse();
+        diagnostics.LogResponseBody.Should().BeFalse();
+        diagnostics.CorrelationHeaderName.Should().Be("X-Correlation-Id");
+        diagnostics.GenerateCorrelationIds.Should().BeTrue();
         pagination.PageSize.Should().Be(50);
         pagination.ContinuationToken.Should().BeNull();
+    }
+
+    [Fact]
+    public void DiagnosticsResolver_InheritsGlobalOptions_WhenModuleOverrideUnset()
+    {
+        var resolver = new DefaultDiagnosticsOptionsResolver(new PublishingPlatform.SDK.Options.PublishingPlatformClientOptions
+        {
+            Diagnostics = new DiagnosticsOptions
+            {
+                EnableLogging = true,
+                EnableTracing = true,
+                EnableMetrics = true,
+                CorrelationHeaderName = "X-Trace-Id",
+                GenerateCorrelationIds = false,
+            },
+        });
+
+        var resolved = resolver.Resolve("Books");
+
+        resolved.EnableLogging.Should().BeTrue();
+        resolved.EnableTracing.Should().BeTrue();
+        resolved.EnableMetrics.Should().BeTrue();
+        resolved.CorrelationHeaderName.Should().Be("X-Trace-Id");
+        resolved.GenerateCorrelationIds.Should().BeFalse();
+    }
+
+    [Fact]
+    public void DiagnosticsResolver_AppliesExplicitModuleOverrides()
+    {
+        var resolver = new DefaultDiagnosticsOptionsResolver(new PublishingPlatform.SDK.Options.PublishingPlatformClientOptions
+        {
+            Diagnostics = new DiagnosticsOptions
+            {
+                EnableLogging = true,
+                EnableTracing = false,
+            },
+            BookContentDiagnostics = new ModuleDiagnosticsOptions
+            {
+                EnableLogging = false,
+                EnableTracing = true,
+            },
+        });
+
+        var resolved = resolver.Resolve("BookContent");
+
+        resolved.EnableLogging.Should().BeFalse();
+        resolved.EnableTracing.Should().BeTrue();
     }
 }

@@ -1,13 +1,20 @@
 using Bogus;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Exceptions;
 using PublishingPlatform.SDK.Extensions;
+using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Errors;
 using PublishingPlatform.SDK.Infrastructure.Transport;
+using PublishingPlatform.SDK.Infrastructure.Transport.Errors;
+using PublishingPlatform.SDK.Infrastructure.Transport.Requests;
 using PublishingPlatform.SDK.Internal.Resilience;
 using PublishingPlatform.SDK.Options;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -45,6 +52,289 @@ public sealed class ResilienceAndTransportTests
         values.Should().ContainSingle().Which.Should().Be(correlationId);
         handler.LastRequest.RequestUri!.ToString().Should().Be("https://api.example.test/books");
         correlationProvider.CallCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SendAsync_PreservesProvidedCorrelationHeader_AndDoesNotGenerateNewId()
+    {
+        const string expectedCorrelationId = "caller-correlation";
+        var correlationProvider = new FixedCorrelationIdProvider("generated-correlation");
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            correlationProvider,
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions(),
+            });
+        var headers = new Dictionary<string, string>
+        {
+            [SharedHttpTransport.CorrelationHeaderName] = expectedCorrelationId,
+        };
+
+        await transport.SendAsync(HttpMethod.Get, "/books", null, headers, "Books.GetById", CancellationToken.None, "Books");
+
+        handler.LastRequest!.Headers.TryGetValues(SharedHttpTransport.CorrelationHeaderName, out var values).Should().BeTrue();
+        values.Should().ContainSingle().Which.Should().Be(expectedCorrelationId);
+        correlationProvider.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SendAsync_UsesCustomCorrelationHeaderName()
+    {
+        const string headerName = "X-Trace-Id";
+        const string correlationId = "trace-123";
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            new FixedCorrelationIdProvider(correlationId),
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    CorrelationHeaderName = headerName,
+                },
+            });
+
+        await transport.SendAsync(HttpMethod.Get, "/books", null, null, "Books.GetById", CancellationToken.None, "Books");
+
+        handler.LastRequest!.Headers.TryGetValues(headerName, out var values).Should().BeTrue();
+        values.Should().ContainSingle().Which.Should().Be(correlationId);
+        handler.LastRequest.Headers.Contains(SharedHttpTransport.CorrelationHeaderName).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SendAsync_EmitsActivityWithCorrelation_WhenTracingEnabled()
+    {
+        const string correlationId = "corr-trace";
+        var startedActivities = new ConcurrentQueue<Activity>();
+        using var listener = CreatePublishingSdkActivityListener(startedActivities);
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            new FixedCorrelationIdProvider(correlationId),
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableTracing = true,
+                },
+            });
+
+        await transport.SendAsync(HttpMethod.Get, "/books/42?include=secret", null, null, "Books.GetById", CancellationToken.None, "Books");
+
+        var activity = startedActivities.Should().ContainSingle().Subject;
+        activity.OperationName.Should().Be("Books.GetById");
+        activity.Tags.Should().Contain(tag => tag.Key == "sdk.module" && tag.Value == "Books");
+        activity.Tags.Should().Contain(tag => tag.Key == "sdk.operation" && tag.Value == "Books.GetById");
+        activity.Tags.Should().Contain(tag => tag.Key == "url.path" && tag.Value == "/books/42");
+        activity.Tags.Should().Contain(tag => tag.Key == "correlation.id" && tag.Value == correlationId);
+    }
+
+    [Fact]
+    public async Task SendAsync_DoesNotEmitActivity_WhenTracingDisabled()
+    {
+        var startedActivities = new ConcurrentQueue<Activity>();
+        using var listener = CreatePublishingSdkActivityListener(startedActivities);
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            new FixedCorrelationIdProvider("corr"),
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableTracing = false,
+                },
+            });
+
+        await transport.SendAsync(HttpMethod.Get, "/books", null, null, "Books.List", CancellationToken.None, "Books");
+
+        startedActivities.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SendAsync_EmitsStructuredLogsWithoutSensitiveValues_WhenLoggingEnabled()
+    {
+        var logger = new RecordingLogger<SharedHttpTransport>();
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            new FixedCorrelationIdProvider("safe-correlation"),
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableLogging = true,
+                    LogRequestBody = false,
+                    LogResponseBody = false,
+                },
+            },
+            logger);
+        using var content = JsonContent.Create(new { ApiKey = "secret-api-key", Token = "secret-token" });
+        var headers = new Dictionary<string, string>
+        {
+            ["Authorization"] = "Bearer secret-token",
+            ["Idempotency-Key"] = "secret-idempotency",
+        };
+
+        await transport.SendAsync(HttpMethod.Post, "/books", content, headers, "Books.Create", CancellationToken.None, "Books");
+
+        logger.Entries.Should().HaveCount(2);
+        var joinedLogs = string.Join(Environment.NewLine, logger.Entries.Select(entry => entry.Message));
+        joinedLogs.Should().Contain("Books");
+        joinedLogs.Should().Contain("Books.Create");
+        joinedLogs.Should().Contain("safe-correlation");
+        joinedLogs.Should().NotContain("secret-api-key");
+        joinedLogs.Should().NotContain("secret-token");
+        joinedLogs.Should().NotContain("secret-idempotency");
+        joinedLogs.Should().NotContain("Authorization");
+        joinedLogs.Should().NotContain("Idempotency-Key");
+    }
+
+    [Fact]
+    public async Task SendAsync_DoesNotEmitLogs_WhenLoggingDisabled()
+    {
+        var logger = new RecordingLogger<SharedHttpTransport>();
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            new FixedCorrelationIdProvider("corr"),
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableLogging = false,
+                },
+            },
+            logger);
+
+        await transport.SendAsync(HttpMethod.Get, "/books", null, null, "Books.List", CancellationToken.None, "Books");
+
+        logger.Entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SendAsync_RecordsMetrics_WhenMetricsEnabled()
+    {
+        var measurements = new ConcurrentBag<string>();
+        using var listener = CreatePublishingSdkMeterListener(measurements);
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            new FixedCorrelationIdProvider("corr"),
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableMetrics = true,
+                },
+            });
+
+        await transport.SendAsync(HttpMethod.Get, "/books", null, null, "Books.List", CancellationToken.None, "Books");
+
+        measurements.Should().Contain("publishing_platform.sdk.requests");
+        measurements.Should().Contain("publishing_platform.sdk.request.duration");
+    }
+
+    [Fact]
+    public async Task SendAsync_DoesNotRecordMetrics_WhenMetricsDisabled()
+    {
+        var measurements = new ConcurrentBag<string>();
+        using var listener = CreatePublishingSdkMeterListener(measurements);
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            new FixedCorrelationIdProvider("corr"),
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableMetrics = false,
+                },
+            });
+
+        await transport.SendAsync(HttpMethod.Get, "/books", null, null, "Books.List", CancellationToken.None, "Books");
+
+        measurements.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SendAsync_UsesModuleDiagnosticsOverride()
+    {
+        var logger = new RecordingLogger<SharedHttpTransport>();
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            new FixedCorrelationIdProvider("corr"),
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableLogging = true,
+                },
+                BookAnalyticsDiagnostics = new ModuleDiagnosticsOptions
+                {
+                    EnableLogging = false,
+                },
+            },
+            logger);
+
+        await transport.SendAsync(HttpMethod.Get, "/analytics", null, null, "BookAnalytics.GetSummary", CancellationToken.None, "BookAnalytics");
+
+        logger.Entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SendAsync_LogsAndMapsFailureDiagnostics()
+    {
+        var logger = new RecordingLogger<SharedHttpTransport>();
+        var mapper = Substitute.For<IPublishingPlatformErrorMapper>();
+        mapper.Map(Arg.Any<PublishingPlatformErrorContext>())
+            .Returns(new ApiException(503, "mapped failure"));
+        using var handler = new RecordingHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = JsonContent.Create(new { Message = "service unavailable" }),
+            }));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = new SharedHttpTransport(
+            httpClient,
+            BuildPassThroughPipeline(),
+            new FixedCorrelationIdProvider("corr-failure"),
+            mapper,
+            new DefaultTransportRequestFactory(),
+            new DefaultTransportResponseErrorReader(),
+            new DefaultTransportErrorContextFactory(),
+            new DefaultDiagnosticsOptionsResolver(new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableLogging = true,
+                },
+            }),
+            logger);
+
+        Func<Task> act = async () => await transport.SendAsync(HttpMethod.Get, "/books/42", null, null, "Books.GetById", CancellationToken.None, "Books");
+
+        await act.Should().ThrowAsync<ApiException>();
+        logger.Entries.Should().Contain(entry =>
+            entry.Message.Contains("503", StringComparison.Ordinal)
+            && entry.Message.Contains("Books.GetById", StringComparison.Ordinal)
+            && entry.Message.Contains("corr-failure", StringComparison.Ordinal));
+        mapper.Received(1).Map(Arg.Is<PublishingPlatformErrorContext>(context =>
+            context.StatusCode == 503
+            && context.OperationName == "Books.GetById"
+            && context.CorrelationId == "corr-failure"));
     }
 
     [Fact]
@@ -158,6 +448,20 @@ public sealed class ResilienceAndTransportTests
 
         act.Should().Throw<PublishingPlatformConfigurationException>()
             .WithMessage("*BaseUrl must be a valid absolute URL.*");
+    }
+
+    [Fact]
+    public void BuildBootstrapServiceProvider_ThrowsForInsecureHttpBaseUrl()
+    {
+        var options = new PublishingPlatformClientOptions
+        {
+            BaseUrl = "http://api.example.test",
+        };
+
+        Action act = () => SdkHttpClientResolver.BuildBootstrapServiceProvider(options);
+
+        act.Should().Throw<PublishingPlatformConfigurationException>()
+            .WithMessage("*BaseUrl must use HTTPS.*");
     }
 
     [Fact]
@@ -643,6 +947,57 @@ public sealed class ResilienceAndTransportTests
         return pipeline;
     }
 
+    private static SharedHttpTransport CreateDiagnosticsTransport(
+        HttpClient httpClient,
+        ICorrelationIdProvider correlationIdProvider,
+        PublishingPlatformClientOptions options,
+        ILogger<SharedHttpTransport>? logger = null)
+    {
+        return new SharedHttpTransport(
+            httpClient,
+            BuildPassThroughPipeline(),
+            correlationIdProvider,
+            new DefaultPublishingPlatformErrorMapper(),
+            new DefaultTransportRequestFactory(),
+            new DefaultTransportResponseErrorReader(),
+            new DefaultTransportErrorContextFactory(),
+            new DefaultDiagnosticsOptionsResolver(options),
+            logger ?? new RecordingLogger<SharedHttpTransport>());
+    }
+
+    private static ActivityListener CreatePublishingSdkActivityListener(ConcurrentQueue<Activity> startedActivities)
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = activitySource => activitySource.Name == "PublishingPlatform.SDK",
+            Sample = static (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            SampleUsingParentId = static (ref ActivityCreationOptions<string> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStarted = startedActivities.Enqueue,
+        };
+
+        ActivitySource.AddActivityListener(listener);
+        return listener;
+    }
+
+    private static MeterListener CreatePublishingSdkMeterListener(ConcurrentBag<string> measurements)
+    {
+        var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, meterListener) =>
+            {
+                if (instrument.Meter.Name == "PublishingPlatform.SDK")
+                {
+                    meterListener.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+
+        listener.SetMeasurementEventCallback<long>((instrument, _, _, _) => measurements.Add(instrument.Name));
+        listener.SetMeasurementEventCallback<double>((instrument, _, _, _) => measurements.Add(instrument.Name));
+        listener.Start();
+        return listener;
+    }
+
     private sealed class RecordingHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _responseFactory;
@@ -658,6 +1013,34 @@ public sealed class ResilienceAndTransportTests
         {
             LastRequest = request;
             return await _responseFactory(request, cancellationToken);
+        }
+    }
+
+    private sealed record LogEntry(LogLevel Level, string Message, Exception? Exception);
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<LogEntry> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+        {
+            return null;
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add(new LogEntry(logLevel, formatter(state, exception), exception));
         }
     }
 

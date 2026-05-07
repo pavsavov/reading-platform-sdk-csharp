@@ -21,6 +21,11 @@ internal static class SdkHttpClientResolver
             throw new PublishingPlatformConfigurationException("BaseUrl must be a valid absolute URL.");
         }
 
+        if (baseAddress.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new PublishingPlatformConfigurationException("BaseUrl must use HTTPS.");
+        }
+
         var services = new ServiceCollection();
         services.AddHttpClient(ClientName, client =>
         {
