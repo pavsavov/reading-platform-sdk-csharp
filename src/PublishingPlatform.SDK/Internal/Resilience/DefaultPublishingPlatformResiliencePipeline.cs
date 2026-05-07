@@ -7,6 +7,8 @@ internal sealed class DefaultPublishingPlatformResiliencePipeline : IPublishingP
 {
     private readonly ResiliencePipeline<HttpResponseMessage> _pipeline;
     private static readonly ResiliencePropertyKey<HttpMethod> HttpMethodKey = new("PublishingPlatform.HttpMethod");
+    private static readonly ResiliencePropertyKey<bool> HasIdempotencyKey = new("PublishingPlatform.HasIdempotencyKey");
+    private static readonly ResiliencePropertyKey<bool> CanReplayContent = new("PublishingPlatform.CanReplayContent");
 
     internal DefaultPublishingPlatformResiliencePipeline(ResiliencePipeline<HttpResponseMessage> pipeline)
     {
@@ -23,6 +25,8 @@ internal sealed class DefaultPublishingPlatformResiliencePipeline : IPublishingP
 
         var resilienceContext = ResilienceContextPool.Shared.Get(cancellationToken);
         resilienceContext.Properties.Set(HttpMethodKey, context.Method);
+        resilienceContext.Properties.Set(HasIdempotencyKey, context.HasIdempotencyKey);
+        resilienceContext.Properties.Set(CanReplayContent, context.CanReplayContent);
 
         try
         {
@@ -45,6 +49,30 @@ internal sealed class DefaultPublishingPlatformResiliencePipeline : IPublishingP
         }
 
         method = HttpMethod.Get;
+        return false;
+    }
+
+    internal static bool TryGetHasIdempotencyKey(ResilienceContext context, out bool hasIdempotencyKey)
+    {
+        if (context.Properties.TryGetValue(HasIdempotencyKey, out var value))
+        {
+            hasIdempotencyKey = value;
+            return true;
+        }
+
+        hasIdempotencyKey = false;
+        return false;
+    }
+
+    internal static bool TryGetCanReplayContent(ResilienceContext context, out bool canReplayContent)
+    {
+        if (context.Properties.TryGetValue(CanReplayContent, out var value))
+        {
+            canReplayContent = value;
+            return true;
+        }
+
+        canReplayContent = true;
         return false;
     }
 }

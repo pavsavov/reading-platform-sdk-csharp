@@ -125,6 +125,8 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
             : moduleName;
         var options = _diagnosticsOptionsResolver.Resolve(effectiveModuleName);
         var correlationId = ResolveCorrelationId(headers, options);
+        var hasIdempotencyKey = HasHeader(headers, TransportHeaderNames.IdempotencyKey);
+        var canReplayContent = IsReplayableContent(content);
         var diagnosticsContext = new RequestDiagnosticsContext(
             effectiveModuleName,
             effectiveOperationName,
@@ -145,6 +147,8 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
                 new PublishingPlatformResilienceContext
                 {
                     Method = method,
+                    HasIdempotencyKey = hasIdempotencyKey,
+                    CanReplayContent = canReplayContent,
                 },
                 async ct =>
                 {
@@ -216,6 +220,35 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
     {
         var separatorIndex = operationName.IndexOf('.', StringComparison.Ordinal);
         return separatorIndex <= 0 ? "SDK" : operationName[..separatorIndex];
+    }
+
+    private static bool HasHeader(IReadOnlyDictionary<string, string>? headers, string headerName)
+    {
+        if (headers is null)
+        {
+            return false;
+        }
+
+        foreach (var header in headers)
+        {
+            if (string.Equals(header.Key, headerName, StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(header.Value))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsReplayableContent(HttpContent? content)
+    {
+        if (content is null)
+        {
+            return true;
+        }
+
+        return content is not StreamContent and not MultipartFormDataContent;
     }
 
     private static Activity? StartActivity(RequestDiagnosticsContext context)

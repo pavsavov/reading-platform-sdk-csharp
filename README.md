@@ -397,7 +397,8 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
         {
             Enabled = true,
             MaxRetryAttempts = 5,
-            BaseDelay = TimeSpan.FromMilliseconds(250)
+            BaseDelay = TimeSpan.FromMilliseconds(250),
+            UseJitter = true
         },
         AttemptTimeout = new TimeoutResilienceOptions
         {
@@ -430,11 +431,14 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
             Enabled = true,
             MaxRetryAttempts = 3,
             BaseDelay = TimeSpan.FromMilliseconds(200),
-            RetryNonIdempotentMethods = true
+            RetryNonIdempotentMethods = true,
+            UseJitter = true
         }
     }
 }).Build();
 ```
+
+When non-idempotent retries are enabled, the SDK retries only safe transient statuses (`429`, `503`) and only when an `Idempotency-Key` is present with replayable request content.
 
 ## ASP.NET Core registration (Options pattern)
 

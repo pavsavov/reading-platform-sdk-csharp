@@ -15,7 +15,8 @@ var clientWithIdempotentRetriesOnly = PublishingPlatformClientBuilder.Create(new
             Enabled = true,
             MaxRetryAttempts = 3,
             BaseDelay = TimeSpan.FromMilliseconds(200),
-            RetryNonIdempotentMethods = false
+            RetryNonIdempotentMethods = false,
+            UseJitter = true
         }
     }
 }).Build();
@@ -32,7 +33,8 @@ var clientWithPostPatchRetries = PublishingPlatformClientBuilder.Create(new Publ
             Enabled = true,
             MaxRetryAttempts = 3,
             BaseDelay = TimeSpan.FromMilliseconds(200),
-            RetryNonIdempotentMethods = true
+            RetryNonIdempotentMethods = true,
+            UseJitter = true
         }
     }
 }).Build();

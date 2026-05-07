@@ -1,3 +1,5 @@
+using PublishingPlatform.SDK.Infrastructure.Transport;
+
 namespace PublishingPlatform.SDK.Clients.BookContent.Requests;
 
 internal sealed class DefaultBookContentRequestHeadersFactory : IBookContentRequestHeadersFactory
@@ -11,7 +13,7 @@ internal sealed class DefaultBookContentRequestHeadersFactory : IBookContentRequ
 
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["Idempotency-Key"] = idempotencyKey,
+            [TransportHeaderNames.IdempotencyKey] = idempotencyKey,
         };
     }
 }

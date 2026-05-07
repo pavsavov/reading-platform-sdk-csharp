@@ -35,7 +35,7 @@ internal static class ResiliencePipelineFactory
                 MaxRetryAttempts = options.Retry.MaxRetryAttempts,
                 Delay = options.Retry.BaseDelay,
                 BackoffType = DelayBackoffType.Exponential,
-                UseJitter = true,
+                UseJitter = options.Retry.UseJitter,
                 ShouldHandle = args => new ValueTask<bool>(ShouldRetry(args, options.Retry.RetryNonIdempotentMethods)),
             });
         }
@@ -79,7 +79,7 @@ internal static class ResiliencePipelineFactory
             return false;
         }
 
-        if (!IsMethodAllowed(method, retryNonIdempotentMethods))
+        if (!IsMethodAllowed(method, retryNonIdempotentMethods, args.Context))
         {
             return false;
         }
@@ -94,17 +94,27 @@ internal static class ResiliencePipelineFactory
             return false;
         }
 
-        return IsMethodAllowed(method, retryNonIdempotentMethods);
+        return IsMethodAllowed(method, retryNonIdempotentMethods, context);
     }
 
     private static bool IsMethodAllowed(HttpMethod method, bool retryNonIdempotentMethods)
+    {
+        return IsMethodAllowed(method, retryNonIdempotentMethods, context: null);
+    }
+
+    private static bool IsMethodAllowed(HttpMethod method, bool retryNonIdempotentMethods, ResilienceContext? context)
     {
         if (IsIdempotentMethod(method))
         {
             return true;
         }
 
-        return retryNonIdempotentMethods && IsNonIdempotentRetryCandidate(method);
+        if (!retryNonIdempotentMethods || !IsNonIdempotentRetryCandidate(method))
+        {
+            return false;
+        }
+
+        return context is not null && IsNonIdempotentRetrySafe(context);
     }
 
     private static bool IsIdempotentMethod(HttpMethod method)
@@ -133,6 +143,22 @@ internal static class ResiliencePipelineFactory
             or HttpStatusCode.BadGateway
             or HttpStatusCode.ServiceUnavailable
             or HttpStatusCode.GatewayTimeout;
+    }
+
+    private static bool IsNonIdempotentRetrySafe(ResilienceContext context)
+    {
+        if (!DefaultPublishingPlatformResiliencePipeline.TryGetHasIdempotencyKey(context, out var hasIdempotencyKey)
+            || !hasIdempotencyKey)
+        {
+            return false;
+        }
+
+        if (!DefaultPublishingPlatformResiliencePipeline.TryGetCanReplayContent(context, out var canReplayContent))
+        {
+            return true;
+        }
+
+        return canReplayContent;
     }
 
     private static void Validate(PublishingPlatformResilienceOptions options)
