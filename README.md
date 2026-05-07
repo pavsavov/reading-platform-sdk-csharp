@@ -191,16 +191,18 @@ Typical use cases:
 
 Module accessor for access-control and entitlement-related workflows.
 
-Current status:
+Available operations:
 
-- Property is available on the root client.
-- Interface is currently a placeholder (no public operations yet in this SDK version).
-- Strongly typed request models are available for upcoming audit log queries (`ListBookAuditLogsRequest`).
+- `GrantAsync(...)`: grant entitlement for a principal to a specific book.
+- `RevokeAsync(...)`: revoke entitlement for a principal and book.
+- `CheckAsync(...)`: check effective access for a principal and book.
+- `ListAsync(...)`: list access grants for a specific book or globally.
 
-Typical use cases once expanded:
+Typical use cases:
 
 - Access policy assignment.
 - Reader or tenant entitlement operations.
+- Support diagnostics for entitlement-denied scenarios.
 
 ### `BookAnalytics` (`IBookAnalyticsClient`)
 

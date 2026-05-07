@@ -12,6 +12,7 @@ public sealed class RequestModelContractsTests
 
         request.BookId.Should().BeEmpty();
         request.PrincipalId.Should().BeEmpty();
+        request.PrincipalType.Should().Be("user");
         request.AccessLevel.Should().BeEmpty();
         request.ExpiresAt.Should().BeNull();
         request.IdempotencyKey.Should().BeNull();
@@ -96,7 +97,28 @@ public sealed class RequestModelContractsTests
 
         request.BookId.Should().BeEmpty();
         request.PrincipalId.Should().BeEmpty();
+        request.PrincipalType.Should().Be("user");
         request.Reason.Should().BeNull();
+    }
+
+    [Fact]
+    public void BookAccessCheckRequest_Defaults_AreSafe()
+    {
+        var request = new BookAccessCheckRequest();
+
+        request.BookId.Should().BeEmpty();
+        request.PrincipalId.Should().BeEmpty();
+        request.PrincipalType.Should().Be("user");
+    }
+
+    [Fact]
+    public void ListBookAccessRequest_Defaults_AreSafe()
+    {
+        var request = new ListBookAccessRequest();
+
+        request.BookId.Should().BeNull();
+        request.PageSize.Should().Be(50);
+        request.ContinuationToken.Should().BeNull();
     }
 
     [Fact]
