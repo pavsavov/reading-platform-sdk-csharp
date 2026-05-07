@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 
 namespace PublishingPlatform.SDK.Clients.BookAuditLogs.Serialization;
@@ -12,33 +13,14 @@ internal sealed class DefaultBookAuditLogsQueryStringBuilder : IBookAuditLogsQue
     /// <inheritdoc />
     public string BuildListPath(ListBookAuditLogsRequest request)
     {
-        var builder = new StringBuilder("/book-audit-logs?");
-        AppendQuery(builder, "page", request.Page.ToString(CultureInfo.InvariantCulture));
-        builder.Append('&');
-        AppendQuery(builder, "pageSize", request.PageSize.ToString(CultureInfo.InvariantCulture));
+        var builder = new StringBuilder("/book-audit-logs");
+        QueryStringBuilderHelper.AppendRequired(builder, "page", request.Page.ToString(CultureInfo.InvariantCulture), isFirstParameter: true);
+        QueryStringBuilderHelper.AppendRequired(builder, "pageSize", request.PageSize.ToString(CultureInfo.InvariantCulture), isFirstParameter: false);
 
-        AppendOptionalQuery(builder, "continuationToken", request.ContinuationToken);
-        AppendOptionalQuery(builder, "bookId", request.BookId);
-        AppendOptionalQuery(builder, "action", request.Action);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, "continuationToken", request.ContinuationToken, isFirstParameter: false);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, "bookId", request.BookId, isFirstParameter: false);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, "action", request.Action, isFirstParameter: false);
 
         return builder.ToString();
-    }
-
-    private static void AppendOptionalQuery(StringBuilder builder, string key, string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        builder.Append('&');
-        AppendQuery(builder, key, value);
-    }
-
-    private static void AppendQuery(StringBuilder builder, string key, string value)
-    {
-        builder.Append(Uri.EscapeDataString(key));
-        builder.Append('=');
-        builder.Append(Uri.EscapeDataString(value));
     }
 }
