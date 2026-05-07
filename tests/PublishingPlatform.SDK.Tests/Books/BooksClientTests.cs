@@ -34,7 +34,6 @@ public sealed class BooksClientTests
         client.BookAccess.Should().NotBeNull();
         client.BookAnalytics.Should().NotBeNull();
         client.BookAuditLogs.Should().NotBeNull();
-        client.BookAssets.Should().NotBeNull();
         client.Webhooks.Should().NotBeNull();
     }
 

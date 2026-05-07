@@ -98,7 +98,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBookAccessClient>(sp => new BookAccessClient(sp.GetRequiredService<ISharedHttpTransport>()));
         services.AddSingleton<IBookAnalyticsClient>(sp => new BookAnalyticsClient(sp.GetRequiredService<ISharedHttpTransport>()));
         services.AddSingleton<IBookAuditLogsClient>(sp => new BookAuditLogsClient(sp.GetRequiredService<ISharedHttpTransport>()));
-        services.AddSingleton<IBookAssetsClient>(sp => new BookAssetsClient(sp.GetRequiredService<ISharedHttpTransport>()));
         services.AddSingleton<IWebhooksClient>(sp => new WebhooksClient(sp.GetRequiredService<ISharedHttpTransport>()));
         services.AddSingleton<IPublishingPlatformClient, PublishingPlatformClient>();
     }

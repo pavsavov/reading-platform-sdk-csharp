@@ -212,7 +212,7 @@ Current status:
 
 - Property is available on the root client.
 - Interface is currently a placeholder (no public operations yet in this SDK version).
-- Strongly typed request models are available for upcoming asset operations (`UploadBookAssetRequest`, `DeleteBookAssetRequest`).
+- Strongly typed request models are available for upcoming analytics operations (`GetBookAnalyticsRequest`).
 
 Typical use cases once expanded:
 
@@ -233,20 +233,6 @@ Typical use cases once expanded:
 
 - Compliance-oriented activity history.
 - Operational troubleshooting and traceability.
-
-### `BookAssets` (`IBookAssetsClient`)
-
-Module accessor for asset-management workflows.
-
-Current status:
-
-- Property is available on the root client.
-- Interface is currently a placeholder (no public operations yet in this SDK version).
-
-Typical use cases once expanded:
-
-- Managing covers, previews, and supplemental media.
-- Asset lifecycle and replacement flows.
 
 ### `Webhooks` (`IWebhooksClient`)
 

@@ -16,7 +16,6 @@ public sealed class PublishingPlatformClientTests
         var bookAccess = Substitute.For<IBookAccessClient>();
         var bookAnalytics = Substitute.For<IBookAnalyticsClient>();
         var bookAuditLogs = Substitute.For<IBookAuditLogsClient>();
-        var bookAssets = Substitute.For<IBookAssetsClient>();
         var webhooks = Substitute.For<IWebhooksClient>();
 
         var client = new PublishingPlatformClient(
@@ -27,7 +26,6 @@ public sealed class PublishingPlatformClientTests
             bookAccess,
             bookAnalytics,
             bookAuditLogs,
-            bookAssets,
             webhooks);
 
         client.Books.Should().BeSameAs(books);
@@ -37,7 +35,6 @@ public sealed class PublishingPlatformClientTests
         client.BookAccess.Should().BeSameAs(bookAccess);
         client.BookAnalytics.Should().BeSameAs(bookAnalytics);
         client.BookAuditLogs.Should().BeSameAs(bookAuditLogs);
-        client.BookAssets.Should().BeSameAs(bookAssets);
         client.Webhooks.Should().BeSameAs(webhooks);
     }
 
@@ -65,7 +62,6 @@ public sealed class PublishingPlatformClientTests
         client.BookAccess.Should().NotBeNull();
         client.BookAnalytics.Should().NotBeNull();
         client.BookAuditLogs.Should().NotBeNull();
-        client.BookAssets.Should().NotBeNull();
         client.Webhooks.Should().NotBeNull();
     }
 }

@@ -68,29 +68,6 @@ public sealed class RequestModelContractsTests
     }
 
     [Fact]
-    public void AssetOperationRequests_ExposeIdempotencyAndIdentityFields()
-    {
-        var uploadRequest = new UploadBookAssetRequest
-        {
-            BookId = "book-01",
-            AssetType = "cover",
-            FileName = "cover.png",
-            ContentType = "image/png",
-            IdempotencyKey = "asset-upload-001",
-        };
-
-        var deleteRequest = new DeleteBookAssetRequest
-        {
-            BookId = uploadRequest.BookId,
-            AssetId = "asset-01",
-            Reason = "replace",
-        };
-
-        uploadRequest.IdempotencyKey.Should().Be("asset-upload-001");
-        deleteRequest.AssetId.Should().Be("asset-01");
-    }
-
-    [Fact]
     public void BookAccessRevokeRequest_Defaults_AreSafe()
     {
         var request = new BookAccessRevokeRequest();

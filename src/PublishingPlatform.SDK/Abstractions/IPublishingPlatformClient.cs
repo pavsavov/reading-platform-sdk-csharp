@@ -16,7 +16,5 @@ public interface IPublishingPlatformClient
 
     IBookAuditLogsClient BookAuditLogs { get; }
 
-    IBookAssetsClient BookAssets { get; }
-
     IWebhooksClient Webhooks { get; }
 }
