@@ -35,6 +35,7 @@ public sealed class RequestModelContractsTests
 
         request.Page.Should().Be(0);
         request.PageSize.Should().Be(50);
+        request.ContinuationToken.Should().BeNull();
         request.ActorId.Should().BeNull();
         request.CorrelationId.Should().BeNull();
     }
