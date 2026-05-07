@@ -1,4 +1,3 @@
-using PublishingPlatform.SDK.Clients.Books.Pagination;
 using PublishingPlatform.SDK.Clients.Books.Requests;
 using PublishingPlatform.SDK.Clients.Books.Serialization;
 using PublishingPlatform.SDK.Clients.Books.Validation;
@@ -13,7 +12,6 @@ internal sealed class BooksClientBuilder
     private IBookQueryStringBuilder _queryStringBuilder = new DefaultBookQueryStringBuilder();
     private IBookResponseReader _responseReader = new DefaultBookResponseReader();
     private IBookRequestHeadersFactory _requestHeadersFactory = new DefaultBookRequestHeadersFactory();
-    private IBookPaginationIteratorFactory _paginationIteratorFactory = new DefaultBookPaginationIteratorFactory();
 
     private BooksClientBuilder(ISharedHttpTransport transport)
     {
@@ -49,12 +47,6 @@ internal sealed class BooksClientBuilder
         return this;
     }
 
-    public BooksClientBuilder WithPaginationIteratorFactory(IBookPaginationIteratorFactory paginationIteratorFactory)
-    {
-        _paginationIteratorFactory = paginationIteratorFactory;
-        return this;
-    }
-
     public BooksClient Build()
     {
         return new BooksClient(
@@ -62,7 +54,6 @@ internal sealed class BooksClientBuilder
             _validator,
             _queryStringBuilder,
             _responseReader,
-            _requestHeadersFactory,
-            _paginationIteratorFactory);
+            _requestHeadersFactory);
     }
 }

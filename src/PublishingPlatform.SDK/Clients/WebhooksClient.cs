@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients.Common.Pagination;
 using PublishingPlatform.SDK.Clients.Webhooks.Requests;
 using PublishingPlatform.SDK.Clients.Webhooks.Serialization;
 using PublishingPlatform.SDK.Clients.Webhooks.Validation;
@@ -134,10 +135,37 @@ public sealed class WebhooksClient : IWebhooksClient
         return await _responseReader.ReadPagedWebhooksAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public IAsyncEnumerable<Webhook> ListAllAsync(
+        ListWebhooksRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        Guards.NotNull(request, nameof(request));
+        _validator.ValidateList(request);
+
+        return PagedAsyncIterator.IterateAsync(
+            request,
+            CloneListRequest,
+            static (iterationRequest, continuationToken) => iterationRequest.ContinuationToken = continuationToken,
+            ListAsync,
+            cancellationToken);
+    }
+
     private static Activity? StartActivity(string operationName)
     {
         var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
         activity?.SetTag("sdk.operation", operationName);
         return activity;
+    }
+
+    private static ListWebhooksRequest CloneListRequest(ListWebhooksRequest request)
+    {
+        return new ListWebhooksRequest
+        {
+            PageSize = request.PageSize,
+            ContinuationToken = request.ContinuationToken,
+            Event = request.Event,
+            IsActive = request.IsActive,
+        };
     }
 }

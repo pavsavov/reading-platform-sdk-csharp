@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
-using PublishingPlatform.SDK.Clients.Books.Pagination;
+using PublishingPlatform.SDK.Clients.Common.Pagination;
 using PublishingPlatform.SDK.Clients.Books.Requests;
 using PublishingPlatform.SDK.Clients.Books.Serialization;
 using PublishingPlatform.SDK.Clients.Books.Validation;
@@ -23,7 +23,6 @@ public sealed class BooksClient : IBooksClient
     private readonly IBookQueryStringBuilder _queryStringBuilder;
     private readonly IBookResponseReader _responseReader;
     private readonly IBookRequestHeadersFactory _requestHeadersFactory;
-    private readonly IBookPaginationIteratorFactory _paginationIteratorFactory;
 
     internal BooksClient(ISharedHttpTransport transport)
         : this(
@@ -31,8 +30,7 @@ public sealed class BooksClient : IBooksClient
             new DefaultBookRequestValidator(),
             new DefaultBookQueryStringBuilder(),
             new DefaultBookResponseReader(),
-            new DefaultBookRequestHeadersFactory(),
-            new DefaultBookPaginationIteratorFactory())
+            new DefaultBookRequestHeadersFactory())
     {
     }
 
@@ -41,15 +39,13 @@ public sealed class BooksClient : IBooksClient
         IBookRequestValidator validator,
         IBookQueryStringBuilder queryStringBuilder,
         IBookResponseReader responseReader,
-        IBookRequestHeadersFactory requestHeadersFactory,
-        IBookPaginationIteratorFactory paginationIteratorFactory)
+        IBookRequestHeadersFactory requestHeadersFactory)
     {
         _transport = transport;
         _validator = validator;
         _queryStringBuilder = queryStringBuilder;
         _responseReader = responseReader;
         _requestHeadersFactory = requestHeadersFactory;
-        _paginationIteratorFactory = paginationIteratorFactory;
     }
 
     /// <inheritdoc />
@@ -88,15 +84,21 @@ public sealed class BooksClient : IBooksClient
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<Book> ListAllAsync(ListBooksRequest request, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    public IAsyncEnumerable<Book> ListAllAsync(ListBooksRequest request, CancellationToken ct = default)
     {
         Guards.NotNull(request, nameof(request));
         _validator.ValidateList(request);
 
-        await foreach (var item in _paginationIteratorFactory.IterateAsync(request, ListAsync, ct).ConfigureAwait(false))
-        {
-            yield return item;
-        }
+        return PagedAsyncIterator.IterateAsync(
+            request,
+            CloneListRequest,
+            static (iterationRequest, continuationToken) =>
+            {
+                iterationRequest.ContinuationToken = continuationToken;
+                iterationRequest.Page++;
+            },
+            ListAsync,
+            ct);
     }
 
     /// <inheritdoc />
@@ -140,5 +142,20 @@ public sealed class BooksClient : IBooksClient
         var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
         activity?.SetTag("sdk.operation", operationName);
         return activity;
+    }
+
+    private static ListBooksRequest CloneListRequest(ListBooksRequest request)
+    {
+        return new ListBooksRequest
+        {
+            Title = request.Title,
+            Author = request.Author,
+            Tags = request.Tags.ToArray(),
+            SortBy = request.SortBy,
+            Descending = request.Descending,
+            Page = request.Page,
+            PageSize = request.PageSize,
+            ContinuationToken = request.ContinuationToken,
+        };
     }
 }

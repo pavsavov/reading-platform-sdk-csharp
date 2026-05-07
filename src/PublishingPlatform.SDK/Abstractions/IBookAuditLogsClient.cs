@@ -17,4 +17,14 @@ public interface IBookAuditLogsClient
     Task<PagedResult<AuditLog>> ListAsync(
         ListBookAuditLogsRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Streams audit log entries across all pages for the provided list request.
+    /// </summary>
+    /// <param name="request">The audit-log query criteria.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An async sequence of audit log entries.</returns>
+    IAsyncEnumerable<AuditLog> ListAllAsync(
+        ListBookAuditLogsRequest request,
+        CancellationToken cancellationToken = default);
 }

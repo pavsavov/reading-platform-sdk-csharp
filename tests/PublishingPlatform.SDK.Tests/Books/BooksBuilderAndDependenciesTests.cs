@@ -1,6 +1,5 @@
 using PublishingPlatform.SDK.Clients;
 using PublishingPlatform.SDK.Clients.Books.Builders;
-using PublishingPlatform.SDK.Clients.Books.Pagination;
 using PublishingPlatform.SDK.Clients.Books.Requests;
 using PublishingPlatform.SDK.Clients.Books.Serialization;
 using PublishingPlatform.SDK.Clients.Books.Validation;
@@ -19,7 +18,6 @@ public sealed class BooksBuilderAndDependenciesTests
         dependencies.QueryStringBuilder.Should().BeOfType<DefaultBookQueryStringBuilder>();
         dependencies.ResponseReader.Should().BeOfType<DefaultBookResponseReader>();
         dependencies.RequestHeadersFactory.Should().BeOfType<DefaultBookRequestHeadersFactory>();
-        dependencies.PaginationIteratorFactory.Should().BeOfType<DefaultBookPaginationIteratorFactory>();
     }
 
     [Fact]
@@ -30,14 +28,12 @@ public sealed class BooksBuilderAndDependenciesTests
         var queryBuilder = Substitute.For<IBookQueryStringBuilder>();
         var responseReader = Substitute.For<IBookResponseReader>();
         var headersFactory = Substitute.For<IBookRequestHeadersFactory>();
-        var paginationFactory = Substitute.For<IBookPaginationIteratorFactory>();
 
         var client = BooksClientBuilder.Create(transport)
             .WithValidator(validator)
             .WithQueryBuilder(queryBuilder)
             .WithResponseReader(responseReader)
             .WithHeadersFactory(headersFactory)
-            .WithPaginationIteratorFactory(paginationFactory)
             .Build();
 
         client.Should().BeOfType<BooksClient>();

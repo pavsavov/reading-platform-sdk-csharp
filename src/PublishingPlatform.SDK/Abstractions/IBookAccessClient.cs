@@ -47,4 +47,14 @@ public interface IBookAccessClient
     Task<PagedResult<BookAccessGrant>> ListAsync(
         ListBookAccessRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Streams access grants across all pages for the provided list request.
+    /// </summary>
+    /// <param name="request">The list request criteria.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An async sequence of access grants.</returns>
+    IAsyncEnumerable<BookAccessGrant> ListAllAsync(
+        ListBookAccessRequest request,
+        CancellationToken cancellationToken = default);
 }

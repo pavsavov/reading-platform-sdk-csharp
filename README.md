@@ -113,6 +113,7 @@ Runnable scripts are available in:
 - `examples/BookPublishing/BookPublishingExample.csx`
 - `examples/BookDistribution/BookDistributionExample.csx`
 - `examples/BookAnalytics/BookAnalyticsExample.csx`
+- `examples/Pagination/PaginationExample.csx`
 
 ## Client modules: available properties and use cases
 
@@ -197,6 +198,7 @@ Available operations:
 - `RevokeAsync(...)`: revoke entitlement for a principal and book.
 - `CheckAsync(...)`: check effective access for a principal and book.
 - `ListAsync(...)`: list access grants for a specific book or globally.
+- `ListAllAsync(...)`: stream access grants across all result pages.
 
 Typical use cases:
 
@@ -227,6 +229,7 @@ Module accessor for audit trail workflows.
 Available operations:
 
 - `ListAsync(...)`: list paged audit log entries with optional filtering criteria.
+- `ListAllAsync(...)`: stream audit log entries across all result pages.
 
 Typical use cases:
 
@@ -244,6 +247,7 @@ Current status:
 - `UpdateAsync(UpdateWebhookRequest, CancellationToken)` updates endpoint settings and subscribed events.
 - `DeleteAsync(webhookId, CancellationToken)` removes a webhook registration.
 - `ListAsync(ListWebhooksRequest, CancellationToken)` lists webhook registrations with optional filters.
+- `ListAllAsync(ListWebhooksRequest, CancellationToken)` streams webhook registrations across all result pages.
 
 Typical use cases:
 
@@ -269,6 +273,14 @@ var page = await client.Webhooks.ListAsync(new ListWebhooksRequest
     Event = "book.published",
     IsActive = true,
 });
+
+await foreach (var activeWebhook in client.Webhooks.ListAllAsync(new ListWebhooksRequest
+{
+    IsActive = true,
+}))
+{
+    Console.WriteLine(activeWebhook.Id);
+}
 ```
 
 ## Which module should I use?
@@ -364,7 +376,7 @@ var updated = await client.Books.UpdateMetadataAsync(
 await client.Books.DeleteAsync(updated.Id);
 ```
 
-For advanced pagination ergonomics, use `ListAllAsync(...)` to stream all results.
+For advanced pagination ergonomics, use `ListAllAsync(...)` on `Books`, `BookAccess`, `BookAuditLogs`, and `Webhooks` to stream all results.
 
 ## Opt-in resilience configuration
 

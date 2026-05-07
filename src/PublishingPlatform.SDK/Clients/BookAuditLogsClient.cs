@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients.Common.Pagination;
 using PublishingPlatform.SDK.Clients.BookAuditLogs.Serialization;
 using PublishingPlatform.SDK.Clients.BookAuditLogs.Validation;
 using PublishingPlatform.SDK.Infrastructure.Diagnostics;
@@ -63,10 +64,46 @@ public sealed class BookAuditLogsClient : IBookAuditLogsClient
         return await _responseReader.ReadListAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public IAsyncEnumerable<AuditLog> ListAllAsync(
+        ListBookAuditLogsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        Guards.NotNull(request, nameof(request));
+        _validator.ValidateList(request);
+
+        return PagedAsyncIterator.IterateAsync(
+            request,
+            CloneListRequest,
+            static (iterationRequest, continuationToken) =>
+            {
+                iterationRequest.ContinuationToken = continuationToken;
+                iterationRequest.Page++;
+            },
+            ListAsync,
+            cancellationToken);
+    }
+
     private static Activity? StartActivity(string operationName)
     {
         var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
         activity?.SetTag("sdk.operation", operationName);
         return activity;
+    }
+
+    private static ListBookAuditLogsRequest CloneListRequest(ListBookAuditLogsRequest request)
+    {
+        return new ListBookAuditLogsRequest
+        {
+            BookId = request.BookId,
+            ActorId = request.ActorId,
+            Action = request.Action,
+            From = request.From,
+            To = request.To,
+            CorrelationId = request.CorrelationId,
+            Page = request.Page,
+            PageSize = request.PageSize,
+            ContinuationToken = request.ContinuationToken,
+        };
     }
 }

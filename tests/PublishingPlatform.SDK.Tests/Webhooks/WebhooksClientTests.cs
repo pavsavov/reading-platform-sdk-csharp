@@ -258,6 +258,38 @@ public sealed class WebhooksClientTests
     }
 
     [Fact]
+    public async Task ListAllAsync_YieldsItemsAcrossPages()
+    {
+        using var handler = new SequenceHandler(
+        [
+            JsonContent.Create(new PagedResult<Webhook>
+            {
+                Items = [CreateWebhook("whk-1")],
+                ContinuationToken = "next",
+            }),
+            JsonContent.Create(new PagedResult<Webhook>
+            {
+                Items = [CreateWebhook("whk-2")],
+            }),
+        ]);
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(
+            client,
+            new NoOpPublishingPlatformResiliencePipeline(),
+            new FixedCorrelationIdProvider(),
+            new DefaultPublishingPlatformErrorMapper());
+        var sut = new WebhooksClient(transport);
+
+        var ids = new List<string>();
+        await foreach (var webhook in sut.ListAllAsync(new ListWebhooksRequest { PageSize = 10 }))
+        {
+            ids.Add(webhook.Id);
+        }
+
+        ids.Should().Equal("whk-1", "whk-2");
+    }
+
+    [Fact]
     public void QueryStringBuilder_OmitsOptionalFilters_WhenMissing()
     {
         var builder = new DefaultWebhookQueryStringBuilder();
@@ -346,6 +378,22 @@ public sealed class WebhooksClientTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return Task.FromResult(_response);
+        }
+    }
+
+    private sealed class SequenceHandler : HttpMessageHandler
+    {
+        private readonly Queue<HttpContent> _responses;
+
+        public SequenceHandler(IEnumerable<HttpContent> responses)
+        {
+            _responses = new Queue<HttpContent>(responses);
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var content = _responses.Dequeue();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
         }
     }
 

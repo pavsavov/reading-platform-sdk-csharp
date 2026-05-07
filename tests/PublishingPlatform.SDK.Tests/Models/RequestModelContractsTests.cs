@@ -1,5 +1,6 @@
 using Bogus;
 using PublishingPlatform.SDK.Models;
+using PublishingPlatform.SDK.Models.Common;
 
 namespace PublishingPlatform.SDK.Tests.ModelContracts;
 
@@ -118,9 +119,18 @@ public sealed class RequestModelContractsTests
     {
         var request = new ListBookAccessRequest();
 
+        request.Should().BeAssignableTo<PaginationRequest>();
         request.BookId.Should().BeNull();
         request.PageSize.Should().Be(50);
         request.ContinuationToken.Should().BeNull();
+    }
+
+    [Fact]
+    public void PaginationBackedRequests_ReuseSharedPaginationContract()
+    {
+        new ListBooksRequest().Should().BeAssignableTo<PaginationRequest>();
+        new ListBookAuditLogsRequest().Should().BeAssignableTo<PaginationRequest>();
+        new ListWebhooksRequest().Should().BeAssignableTo<PaginationRequest>();
     }
 
     [Fact]
