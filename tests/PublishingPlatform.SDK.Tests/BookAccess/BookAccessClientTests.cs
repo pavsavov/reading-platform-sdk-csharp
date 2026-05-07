@@ -289,6 +289,34 @@ public sealed class BookAccessClientTests
         ex.Which.Message.Should().Contain("Paged book access payload was empty");
     }
 
+    [Fact]
+    public async Task ListAllAsync_YieldsItemsAcrossPages()
+    {
+        using var handler = new SequenceHandler(
+        [
+            JsonContent.Create(new PagedResult<BookAccessGrant>
+            {
+                Items = [new BookAccessGrant { GrantId = "grant-1", BookId = "book-1", PrincipalId = "user-1", PrincipalType = "user", AccessLevel = "read" }],
+                ContinuationToken = "next-token",
+            }),
+            JsonContent.Create(new PagedResult<BookAccessGrant>
+            {
+                Items = [new BookAccessGrant { GrantId = "grant-2", BookId = "book-1", PrincipalId = "user-2", PrincipalType = "user", AccessLevel = "write" }],
+            }),
+        ]);
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookAccessClient(transport);
+
+        var grantIds = new List<string>();
+        await foreach (var grant in sut.ListAllAsync(new ListBookAccessRequest { PageSize = 10 }))
+        {
+            grantIds.Add(grant.GrantId);
+        }
+
+        grantIds.Should().Equal("grant-1", "grant-2");
+    }
+
     private sealed class SingleResponseHandler : HttpMessageHandler
     {
         private readonly HttpResponseMessage _response;
@@ -301,6 +329,22 @@ public sealed class BookAccessClientTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return Task.FromResult(_response);
+        }
+    }
+
+    private sealed class SequenceHandler : HttpMessageHandler
+    {
+        private readonly Queue<HttpContent> _responses;
+
+        public SequenceHandler(IEnumerable<HttpContent> responses)
+        {
+            _responses = new Queue<HttpContent>(responses);
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var content = _responses.Dequeue();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
         }
     }
 

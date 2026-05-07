@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients.Common.Pagination;
 using PublishingPlatform.SDK.Clients.BookAccess.Serialization;
 using PublishingPlatform.SDK.Clients.BookAccess.Validation;
 using PublishingPlatform.SDK.Infrastructure.Diagnostics;
@@ -128,10 +129,39 @@ public sealed class BookAccessClient : IBookAccessClient
         return await _responseReader.ReadPagedGrantResultAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public IAsyncEnumerable<BookAccessGrant> ListAllAsync(
+        ListBookAccessRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        Guards.NotNull(request, nameof(request));
+        _validator.ValidateList(request);
+
+        return PagedAsyncIterator.IterateAsync(
+            request,
+            CloneListRequest,
+            static (iterationRequest, continuationToken) => iterationRequest.ContinuationToken = continuationToken,
+            ListAsync,
+            cancellationToken);
+    }
+
     private static Activity? StartActivity(string operationName)
     {
         var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
         activity?.SetTag("sdk.operation", operationName);
         return activity;
+    }
+
+    private static ListBookAccessRequest CloneListRequest(ListBookAccessRequest request)
+    {
+        return new ListBookAccessRequest
+        {
+            BookId = request.BookId,
+            PrincipalId = request.PrincipalId,
+            PrincipalType = request.PrincipalType,
+            AccessLevel = request.AccessLevel,
+            PageSize = request.PageSize,
+            ContinuationToken = request.ContinuationToken,
+        };
     }
 }

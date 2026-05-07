@@ -49,4 +49,14 @@ public interface IWebhooksClient
     Task<PagedResult<Webhook>> ListAsync(
         ListWebhooksRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Streams webhook registrations across all pages for the provided list request.
+    /// </summary>
+    /// <param name="request">The webhook list request.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An async sequence of webhook registrations.</returns>
+    IAsyncEnumerable<Webhook> ListAllAsync(
+        ListWebhooksRequest request,
+        CancellationToken cancellationToken = default);
 }

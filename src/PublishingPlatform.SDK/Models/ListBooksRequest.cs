@@ -1,9 +1,11 @@
+using PublishingPlatform.SDK.Models.Common;
+
 namespace PublishingPlatform.SDK.Models;
 
 /// <summary>
 /// Represents filtering, sorting, and pagination criteria for listing books.
 /// </summary>
-public sealed class ListBooksRequest
+public sealed class ListBooksRequest : PaginationRequest
 {
     /// <summary>
     /// Gets or sets a title filter.
@@ -35,13 +37,4 @@ public sealed class ListBooksRequest
     /// </summary>
     public int Page { get; set; }
 
-    /// <summary>
-    /// Gets or sets requested page size.
-    /// </summary>
-    public int PageSize { get; set; } = 50;
-
-    /// <summary>
-    /// Gets or sets continuation token when continuing paged reads.
-    /// </summary>
-    public string? ContinuationToken { get; set; }
 }

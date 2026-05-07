@@ -1,9 +1,11 @@
+using PublishingPlatform.SDK.Models.Common;
+
 namespace PublishingPlatform.SDK.Models;
 
 /// <summary>
 /// Represents filtering and paging criteria for book audit log queries.
 /// </summary>
-public sealed class ListBookAuditLogsRequest
+public sealed class ListBookAuditLogsRequest : PaginationRequest
 {
     /// <summary>
     /// Gets or sets the book identifier.
@@ -40,13 +42,4 @@ public sealed class ListBookAuditLogsRequest
     /// </summary>
     public int Page { get; set; }
 
-    /// <summary>
-    /// Gets or sets requested page size.
-    /// </summary>
-    public int PageSize { get; set; } = 50;
-
-    /// <summary>
-    /// Gets or sets an optional continuation token.
-    /// </summary>
-    public string? ContinuationToken { get; set; }
 }

@@ -161,6 +161,34 @@ public sealed class BookAuditLogsClientTests
     }
 
     [Fact]
+    public async Task ListAllAsync_YieldsItemsAcrossPages()
+    {
+        using var handler = new SequenceHandler(
+        [
+            JsonContent.Create(new PagedResult<AuditLog>
+            {
+                Items = [new AuditLog { Id = "log-1", Action = "book.updated", Timestamp = DateTimeOffset.UtcNow }],
+                ContinuationToken = "next",
+            }),
+            JsonContent.Create(new PagedResult<AuditLog>
+            {
+                Items = [new AuditLog { Id = "log-2", Action = "book.published", Timestamp = DateTimeOffset.UtcNow }],
+            }),
+        ]);
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookAuditLogsClient(transport);
+
+        var ids = new List<string>();
+        await foreach (var auditLog in sut.ListAllAsync(new ListBookAuditLogsRequest { BookId = "book-1", PageSize = 10 }))
+        {
+            ids.Add(auditLog.Id);
+        }
+
+        ids.Should().Equal("log-1", "log-2");
+    }
+
+    [Fact]
     public void QueryStringBuilder_BuildsDeterministicEncodedPath()
     {
         var builder = new DefaultBookAuditLogsQueryStringBuilder();
@@ -232,6 +260,22 @@ public sealed class BookAuditLogsClientTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return Task.FromResult(_response);
+        }
+    }
+
+    private sealed class SequenceHandler : HttpMessageHandler
+    {
+        private readonly Queue<HttpContent> _responses;
+
+        public SequenceHandler(IEnumerable<HttpContent> responses)
+        {
+            _responses = new Queue<HttpContent>(responses);
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var content = _responses.Dequeue();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
         }
     }
 
