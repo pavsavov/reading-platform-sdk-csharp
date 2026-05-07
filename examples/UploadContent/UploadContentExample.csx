@@ -1,8 +1,5 @@
-# UploadContent
+//r "nuget: PublishingPlatform.SDK"
 
-Use `BookContent.UploadOrReplaceAsync(...)` to upload or replace a book content file.
-
-```csharp
 using PublishingPlatform.SDK.Clients;
 using PublishingPlatform.SDK.Models;
 using PublishingPlatform.SDK.Options;
@@ -27,6 +24,3 @@ var content = await client.BookContent.UploadOrReplaceAsync(
     });
 
 Console.WriteLine($"Uploaded content format: {content.Format}");
-```
-
-Prefer a stable idempotency key for retry-safe replacement attempts.
