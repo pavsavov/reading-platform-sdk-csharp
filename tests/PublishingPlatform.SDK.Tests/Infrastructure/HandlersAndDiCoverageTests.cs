@@ -1,26 +1,28 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients;
 using PublishingPlatform.SDK.Extensions;
-using PublishingPlatform.SDK.Infrastructure.Auth;
 using PublishingPlatform.SDK.Infrastructure.Errors;
 using PublishingPlatform.SDK.Infrastructure.Http.Handlers;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal.Resilience;
+using PublishingPlatform.SDK.Models;
 using PublishingPlatform.SDK.Options;
+using System.Net.Http.Json;
 
 namespace PublishingPlatform.SDK.Tests.Infrastructure;
 
 public sealed class HandlersAndDiCoverageTests
 {
     [Fact]
-    public async Task AuthHandler_SetsBearerToken_AndCallsInnerHandler()
+    public async Task ApiKeyAuthHandler_SetsApiKeyHeader_AndCallsInnerHandler()
     {
-        var tokenProvider = Substitute.For<ITokenProvider>();
-        tokenProvider.GetTokenAsync(Arg.Any<CancellationToken>()).Returns("secret-token");
+        const string expectedApiKey = "secret-api-key";
 
         using var innerHandler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
-        var handler = new AuthHandler(tokenProvider)
+        var handler = new ApiKeyAuthHandler(expectedApiKey)
         {
             InnerHandler = innerHandler,
         };
@@ -29,10 +31,58 @@ public sealed class HandlersAndDiCoverageTests
         _ = await client.GetAsync("https://api.example.test/books");
 
         innerHandler.LastRequest.Should().NotBeNull();
-        innerHandler.LastRequest!.Headers.Authorization.Should().NotBeNull();
-        innerHandler.LastRequest.Headers.Authorization!.Scheme.Should().Be("Bearer");
-        innerHandler.LastRequest.Headers.Authorization.Parameter.Should().Be("secret-token");
-        await tokenProvider.Received(1).GetTokenAsync(Arg.Any<CancellationToken>());
+        innerHandler.LastRequest!.Headers.TryGetValues(TransportHeaderNames.ApiKey, out var values).Should().BeTrue();
+        values.Should().ContainSingle().Which.Should().Be(expectedApiKey);
+    }
+
+    [Fact]
+    public async Task AddPublishingPlatformClient_AppliesApiKeyHeaderThroughNamedHttpClientPipeline()
+    {
+        const string expectedApiKey = "di-api-key";
+        var innerHandler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
+        var services = new ServiceCollection();
+        services.AddPublishingPlatformClient(options =>
+        {
+            options.BaseUrl = "https://api.example.test";
+            options.ApiKey = expectedApiKey;
+        });
+        services.Configure<HttpClientFactoryOptions>(SdkHttpClientResolver.ClientName, options =>
+        {
+            options.HttpMessageHandlerBuilderActions.Add(builder => builder.PrimaryHandler = innerHandler);
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var transport = provider.GetRequiredService<ISharedHttpTransport>();
+
+        using var response = await transport.SendAsync(HttpMethod.Get, "/books", null, null, "Books.List");
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        innerHandler.LastRequest.Should().NotBeNull();
+        innerHandler.LastRequest!.Headers.TryGetValues(TransportHeaderNames.ApiKey, out var values).Should().BeTrue();
+        values.Should().ContainSingle().Which.Should().Be(expectedApiKey);
+    }
+
+    [Fact]
+    public async Task PublishingPlatformClientBuilder_AppliesApiKeyHeaderThroughBootstrapHttpClientPipeline()
+    {
+        const string expectedApiKey = "builder-api-key";
+        using var innerHandler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new { Items = Array.Empty<Book>(), TotalCount = 0, ContinuationToken = (string?)null }),
+        }));
+        var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClientOptions
+        {
+            BaseUrl = "https://api.example.test",
+            ApiKey = expectedApiKey,
+        })
+        .WithPrimaryHttpMessageHandler(innerHandler)
+        .Build();
+
+        _ = await client.Books.ListAsync(new ListBooksRequest());
+
+        innerHandler.LastRequest.Should().NotBeNull();
+        innerHandler.LastRequest!.Headers.TryGetValues(TransportHeaderNames.ApiKey, out var values).Should().BeTrue();
+        values.Should().ContainSingle().Which.Should().Be(expectedApiKey);
     }
 
     [Fact]

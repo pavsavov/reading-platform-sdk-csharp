@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using PublishingPlatform.SDK.Exceptions;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients;
 using PublishingPlatform.SDK.Infrastructure.Diagnostics;
@@ -27,7 +26,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services)
     {
         services.AddOptions<PublishingPlatformClientOptions>()
-            .Validate(ValidateOptions)
+            .Validate(PublishingPlatformClientOptionsValidator.Validate)
             .ValidateOnStart();
 
         RegisterPublishingPlatformClient(services);
@@ -49,7 +48,7 @@ public static class ServiceCollectionExtensions
 
         services.AddOptions<PublishingPlatformClientOptions>()
             .Configure(configure)
-            .Validate(ValidateOptions)
+            .Validate(PublishingPlatformClientOptionsValidator.Validate)
             .ValidateOnStart();
 
         RegisterPublishingPlatformClient(services);
@@ -65,6 +64,11 @@ public static class ServiceCollectionExtensions
             var options = sp.GetRequiredService<IOptions<PublishingPlatformClientOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
             client.Timeout = options.Timeout;
+        })
+        .AddHttpMessageHandler(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<PublishingPlatformClientOptions>>().Value;
+            return new ApiKeyAuthHandler(options.ApiKey);
         });
 
         services.AddSingleton<IPublishingPlatformResiliencePipeline>(sp =>
@@ -111,31 +115,5 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBookAuditLogsClient>(sp => new BookAuditLogsClient(sp.GetRequiredService<ISharedHttpTransport>()));
         services.AddSingleton<IWebhooksClient>(sp => new WebhooksClient(sp.GetRequiredService<ISharedHttpTransport>()));
         services.AddSingleton<IPublishingPlatformClient, PublishingPlatformClient>();
-    }
-
-    private static bool ValidateOptions(PublishingPlatformClientOptions options)
-    {
-        if (!Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUri))
-        {
-            throw new PublishingPlatformConfigurationException("BaseUrl must be a valid absolute URL.");
-        }
-
-        if (baseUri.Scheme != Uri.UriSchemeHttps)
-        {
-            throw new PublishingPlatformConfigurationException("BaseUrl must use HTTPS.");
-        }
-
-        if (options.Timeout <= TimeSpan.Zero)
-        {
-            throw new PublishingPlatformConfigurationException("Timeout must be greater than zero.");
-        }
-
-        if (options.Diagnostics is not null
-            && string.IsNullOrWhiteSpace(options.Diagnostics.CorrelationHeaderName))
-        {
-            throw new PublishingPlatformConfigurationException("Diagnostics correlation header name must not be empty.");
-        }
-
-        return true;
     }
 }

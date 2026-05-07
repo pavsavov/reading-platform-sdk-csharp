@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients;
 using PublishingPlatform.SDK.Exceptions;
 using PublishingPlatform.SDK.Extensions;
 using PublishingPlatform.SDK.Infrastructure.Diagnostics;
@@ -180,6 +181,7 @@ public sealed class ResilienceAndTransportTests
         var headers = new Dictionary<string, string>
         {
             ["Authorization"] = "Bearer secret-token",
+            [TransportHeaderNames.ApiKey] = "secret-api-key-header",
             ["Idempotency-Key"] = "secret-idempotency",
         };
 
@@ -192,8 +194,10 @@ public sealed class ResilienceAndTransportTests
         joinedLogs.Should().Contain("safe-correlation");
         joinedLogs.Should().NotContain("secret-api-key");
         joinedLogs.Should().NotContain("secret-token");
+        joinedLogs.Should().NotContain("secret-api-key-header");
         joinedLogs.Should().NotContain("secret-idempotency");
         joinedLogs.Should().NotContain("Authorization");
+        joinedLogs.Should().NotContain(TransportHeaderNames.ApiKey);
         joinedLogs.Should().NotContain("Idempotency-Key");
     }
 
@@ -471,6 +475,7 @@ public sealed class ResilienceAndTransportTests
         var options = new PublishingPlatformClientOptions
         {
             BaseUrl = "https://api.example.test",
+            ApiKey = "key",
             Timeout = expectedTimeout,
         };
 
@@ -532,6 +537,40 @@ public sealed class ResilienceAndTransportTests
 
         act.Should().Throw<PublishingPlatformConfigurationException>()
             .WithMessage("*BaseUrl must be a valid absolute URL.*");
+    }
+
+    [Fact]
+    public void AddPublishingPlatformClient_ThrowsForMissingApiKey_WhenUsingOptionsPattern()
+    {
+        var services = new ServiceCollection();
+        services.Configure<PublishingPlatformClientOptions>(options =>
+        {
+            options.BaseUrl = "https://api.example.test";
+            options.ApiKey = " ";
+        });
+        services.AddPublishingPlatformClient();
+
+        using var provider = services.BuildServiceProvider(validateScopes: true);
+
+        Action act = () => _ = provider.GetRequiredService<IOptions<PublishingPlatformClientOptions>>().Value;
+
+        act.Should().Throw<PublishingPlatformConfigurationException>()
+            .WithMessage("*ApiKey must not be empty.*");
+    }
+
+    [Fact]
+    public void PublishingPlatformClientBuilder_ThrowsForMissingApiKey()
+    {
+        var options = new PublishingPlatformClientOptions
+        {
+            BaseUrl = "https://api.example.test",
+            ApiKey = string.Empty,
+        };
+
+        Action act = () => PublishingPlatformClientBuilder.Create(options).Build();
+
+        act.Should().Throw<PublishingPlatformConfigurationException>()
+            .WithMessage("*ApiKey must not be empty.*");
     }
 
     [Fact]

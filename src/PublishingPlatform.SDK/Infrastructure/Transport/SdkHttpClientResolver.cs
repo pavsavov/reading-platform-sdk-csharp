@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Infrastructure.Http.Handlers;
 using PublishingPlatform.SDK.Options;
 
 namespace PublishingPlatform.SDK.Infrastructure.Transport;
@@ -16,22 +16,28 @@ internal static class SdkHttpClientResolver
 
     public static ServiceProvider BuildBootstrapServiceProvider(PublishingPlatformClientOptions options)
     {
-        if (!Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseAddress))
-        {
-            throw new PublishingPlatformConfigurationException("BaseUrl must be a valid absolute URL.");
-        }
+        return BuildBootstrapServiceProvider(options, primaryHandler: null);
+    }
 
-        if (baseAddress.Scheme != Uri.UriSchemeHttps)
-        {
-            throw new PublishingPlatformConfigurationException("BaseUrl must use HTTPS.");
-        }
+    internal static ServiceProvider BuildBootstrapServiceProvider(
+        PublishingPlatformClientOptions options,
+        HttpMessageHandler? primaryHandler)
+    {
+        PublishingPlatformClientOptionsValidator.Validate(options);
+        var baseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
 
         var services = new ServiceCollection();
-        services.AddHttpClient(ClientName, client =>
+        var httpClientBuilder = services.AddHttpClient(ClientName, client =>
         {
             client.BaseAddress = baseAddress;
             client.Timeout = options.Timeout;
-        });
+        })
+        .AddHttpMessageHandler(() => new ApiKeyAuthHandler(options.ApiKey));
+
+        if (primaryHandler is not null)
+        {
+            httpClientBuilder.ConfigurePrimaryHttpMessageHandler(() => primaryHandler);
+        }
 
         return services.BuildServiceProvider();
     }

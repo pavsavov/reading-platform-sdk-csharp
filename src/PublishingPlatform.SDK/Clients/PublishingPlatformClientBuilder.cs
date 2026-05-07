@@ -12,6 +12,7 @@ public sealed class PublishingPlatformClientBuilder
     private readonly PublishingPlatformClientOptions _options;
     private IPublishingPlatformResiliencePipeline? _customPipeline;
     private IPublishingPlatformErrorMapper? _customErrorMapper;
+    private HttpMessageHandler? _primaryHttpMessageHandler;
 
     private PublishingPlatformClientBuilder(PublishingPlatformClientOptions options)
     {
@@ -37,9 +38,16 @@ public sealed class PublishingPlatformClientBuilder
         return this;
     }
 
+    internal PublishingPlatformClientBuilder WithPrimaryHttpMessageHandler(HttpMessageHandler primaryHttpMessageHandler)
+    {
+        ArgumentNullException.ThrowIfNull(primaryHttpMessageHandler);
+        _primaryHttpMessageHandler = primaryHttpMessageHandler;
+        return this;
+    }
+
     public IPublishingPlatformClient Build()
     {
-        var serviceProvider = SdkHttpClientResolver.BuildBootstrapServiceProvider(_options);
+        var serviceProvider = SdkHttpClientResolver.BuildBootstrapServiceProvider(_options, _primaryHttpMessageHandler);
         var httpClient = SdkHttpClientResolver.Resolve(serviceProvider);
         var pipeline = _customPipeline ?? ResiliencePipelineFactory.Create(_options.Resilience);
         var errorMapper = _customErrorMapper ?? _options.ErrorMapper ?? new DefaultPublishingPlatformErrorMapper();
