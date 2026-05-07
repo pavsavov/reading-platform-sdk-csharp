@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using Bogus;
-using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients;
 using PublishingPlatform.SDK.Exceptions;
 using PublishingPlatform.SDK.Infrastructure.Transport;
@@ -46,7 +45,7 @@ public sealed class BookAnalyticsClientTests
                     ActiveReaders = 18,
                 }),
             }));
-        IBookAnalyticsClient sut = new BookAnalyticsClient(transport);
+        BookAnalyticsClient sut = new BookAnalyticsClient(transport);
 
         var result = await sut.GetSummaryAsync(request, token);
 
@@ -66,7 +65,7 @@ public sealed class BookAnalyticsClientTests
     public async Task GetSummaryAsync_ThrowsArgumentNullException_ForNullRequest()
     {
         var transport = Substitute.For<ISharedHttpTransport>();
-        IBookAnalyticsClient sut = new BookAnalyticsClient(transport);
+        BookAnalyticsClient sut = new BookAnalyticsClient(transport);
 
         var act = async () => await sut.GetSummaryAsync(null!);
 
@@ -78,7 +77,7 @@ public sealed class BookAnalyticsClientTests
     public async Task GetSummaryAsync_ThrowsBookValidationException_ForMissingRequiredFields()
     {
         var transport = Substitute.For<ISharedHttpTransport>();
-        IBookAnalyticsClient sut = new BookAnalyticsClient(transport);
+        BookAnalyticsClient sut = new BookAnalyticsClient(transport);
         var request = new GetBookAnalyticsRequest
         {
             BookId = "book-1",
@@ -97,7 +96,7 @@ public sealed class BookAnalyticsClientTests
     public async Task GetSummaryAsync_ThrowsBookValidationException_ForMissingBookId()
     {
         var transport = Substitute.For<ISharedHttpTransport>();
-        IBookAnalyticsClient sut = new BookAnalyticsClient(transport);
+        BookAnalyticsClient sut = new BookAnalyticsClient(transport);
         var request = new GetBookAnalyticsRequest
         {
             BookId = " ",
@@ -116,7 +115,7 @@ public sealed class BookAnalyticsClientTests
     public async Task GetSummaryAsync_ThrowsBookValidationException_ForMissingTo()
     {
         var transport = Substitute.For<ISharedHttpTransport>();
-        IBookAnalyticsClient sut = new BookAnalyticsClient(transport);
+        BookAnalyticsClient sut = new BookAnalyticsClient(transport);
         var request = new GetBookAnalyticsRequest
         {
             BookId = "book-1",
@@ -135,7 +134,7 @@ public sealed class BookAnalyticsClientTests
     public async Task GetSummaryAsync_ThrowsBookValidationException_ForInvalidRange()
     {
         var transport = Substitute.For<ISharedHttpTransport>();
-        IBookAnalyticsClient sut = new BookAnalyticsClient(transport);
+        BookAnalyticsClient sut = new BookAnalyticsClient(transport);
         var request = new GetBookAnalyticsRequest
         {
             BookId = "book-1",
@@ -164,7 +163,7 @@ public sealed class BookAnalyticsClientTests
             {
                 Content = new StringContent("null", Encoding.UTF8, "application/json"),
             }));
-        IBookAnalyticsClient sut = new BookAnalyticsClient(transport);
+        BookAnalyticsClient sut = new BookAnalyticsClient(transport);
         var request = new GetBookAnalyticsRequest
         {
             BookId = "book-null",
