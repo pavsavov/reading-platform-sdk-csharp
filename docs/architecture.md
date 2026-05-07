@@ -20,6 +20,21 @@ The current implementation provides the shared client foundation. The deeper boo
 
 The module clients are wired through dependency injection and the direct builder path. Their concrete classes currently share the same internal transport foundation, while detailed module operations are still evolving through the implementation backlog.
 
+### Publishing And Distribution Separation
+
+`BookPublishing` and `BookDistribution` are separate by design:
+
+- `BookPublishing` owns lifecycle transitions and answers "is this book published?".
+- `BookDistribution` owns downstream delivery workflows and answers "where is this published book delivered?".
+
+Correlation rules:
+
+- Shared `bookId` links lifecycle and distribution concerns.
+- Distribution uses `operationId` as the long-running workflow identity.
+- Publishing success is a business precondition for distribution at backend level, not a merged client state machine.
+
+This split keeps lifecycle state changes isolated from partner/channel operational failures, enabling safer retries and clearer diagnostics.
+
 Consumers can create the SDK in two supported ways:
 
 - Hosted applications use `AddPublishingPlatformClient()` with `IOptions<PublishingPlatformClientOptions>`.

@@ -1,0 +1,45 @@
+using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Models;
+
+namespace PublishingPlatform.SDK.Clients.BookDistribution.Validation;
+
+/// <summary>
+/// Enforces input validation rules for book distribution operations.
+/// </summary>
+internal sealed class DefaultBookDistributionRequestValidator : IBookDistributionRequestValidator
+{
+    /// <inheritdoc />
+    public void ValidateBookId(string bookId)
+    {
+        if (string.IsNullOrWhiteSpace(bookId))
+        {
+            throw new BookValidationException("Book id is required.");
+        }
+    }
+
+    /// <inheritdoc />
+    public void ValidateOperationId(string operationId)
+    {
+        if (string.IsNullOrWhiteSpace(operationId))
+        {
+            throw new BookValidationException("Distribution operation id is required.");
+        }
+    }
+
+    /// <inheritdoc />
+    public void ValidateStartRequest(StartBookDistributionRequest request)
+    {
+        if (request.Channels.Count == 0)
+        {
+            throw new BookValidationException("At least one distribution channel is required.");
+        }
+
+        foreach (var channel in request.Channels)
+        {
+            if (string.IsNullOrWhiteSpace(channel))
+            {
+                throw new BookValidationException("Distribution channels cannot contain empty values.");
+            }
+        }
+    }
+}
