@@ -21,6 +21,30 @@ internal static class GoogleBooksMappingExtensions
             Author = payload.VolumeInfo?.Authors is { Count: > 0 } authors
                 ? authors[0]
                 : string.Empty,
+            Tags = payload.VolumeInfo?.Categories is { Count: > 0 } categories
+                ? categories
+                : Array.Empty<string>(),
         };
+    }
+
+    /// <summary>
+    /// Maps a Google Books volumes response into platform <see cref="Book"/> models.
+    /// </summary>
+    /// <param name="payload">The source payload.</param>
+    /// <returns>Mapped books.</returns>
+    public static IReadOnlyList<Book> ToBooks(this GoogleBooksVolumesResponsePayload payload)
+    {
+        if (payload.Items is null || payload.Items.Count == 0)
+        {
+            return Array.Empty<Book>();
+        }
+
+        var books = new Book[payload.Items.Count];
+        for (var i = 0; i < payload.Items.Count; i++)
+        {
+            books[i] = payload.Items[i].ToBook();
+        }
+
+        return books;
     }
 }

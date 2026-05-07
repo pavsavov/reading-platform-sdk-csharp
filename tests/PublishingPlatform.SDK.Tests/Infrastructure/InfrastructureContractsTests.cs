@@ -73,6 +73,33 @@ public sealed class InfrastructureContractsTests
     }
 
     [Fact]
+    public void GoogleBooksMapping_ToBooks_MapsCollectionAndCategories()
+    {
+        var payload = new GoogleBooksVolumesResponsePayload
+        {
+            Items =
+            [
+                new GoogleBooksVolumePayload
+                {
+                    Id = "gid-1",
+                    VolumeInfo = new GoogleBooksVolumeInfoPayload
+                    {
+                        Title = "GTitle1",
+                        Authors = ["A1", "A2"],
+                        Categories = ["tech", "architecture"],
+                    },
+                },
+            ],
+        };
+
+        var mapped = payload.ToBooks();
+
+        mapped.Should().HaveCount(1);
+        mapped[0].Id.Should().Be("gid-1");
+        mapped[0].Tags.Should().Equal("tech", "architecture");
+    }
+
+    [Fact]
     public void DiagnosticsAndPaginationDefaults_AreStable()
     {
         var diagnostics = new DiagnosticsOptions();

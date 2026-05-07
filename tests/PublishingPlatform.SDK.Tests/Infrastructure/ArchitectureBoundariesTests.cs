@@ -11,6 +11,9 @@ public sealed class ArchitectureBoundariesTests
     {
         typeof(GoogleBooksVolumePayload).IsPublic.Should().BeFalse();
         typeof(GoogleBooksVolumeInfoPayload).IsPublic.Should().BeFalse();
+        typeof(GoogleBooksVolumesResponsePayload).IsPublic.Should().BeFalse();
+        typeof(GoogleBooksImageLinksPayload).IsPublic.Should().BeFalse();
+        typeof(GoogleBooksIndustryIdentifierPayload).IsPublic.Should().BeFalse();
     }
 
     [Fact]
