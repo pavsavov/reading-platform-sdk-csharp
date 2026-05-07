@@ -112,6 +112,7 @@ Runnable scripts are available in:
 - `examples/BasicUsage/DiInitializationExample.csx`
 - `examples/BookPublishing/BookPublishingExample.csx`
 - `examples/BookDistribution/BookDistributionExample.csx`
+- `examples/BookAnalytics/BookAnalyticsExample.csx`
 
 ## Client modules: available properties and use cases
 
@@ -211,8 +212,9 @@ Module accessor for analytics and reporting workflows.
 Current status:
 
 - Property is available on the root client.
-- Interface is currently a placeholder (no public operations yet in this SDK version).
-- Strongly typed request models are available for upcoming analytics operations (`GetBookAnalyticsRequest`).
+- `GetSummaryAsync(GetBookAnalyticsRequest, CancellationToken)` is available for aggregate analytics retrieval.
+- Current request-to-query mapping sends `bookId`, `from`, and `to` to `/book-analytics/summary`.
+- `Granularity` and `IncludeUniqueReaders` exist on `GetBookAnalyticsRequest` as future-facing fields and are currently not sent until the backend contract expands.
 
 Typical use cases once expanded:
 
