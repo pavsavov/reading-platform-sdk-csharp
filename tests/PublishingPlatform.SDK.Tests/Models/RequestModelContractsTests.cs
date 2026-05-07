@@ -88,4 +88,49 @@ public sealed class RequestModelContractsTests
         uploadRequest.IdempotencyKey.Should().Be("asset-upload-001");
         deleteRequest.AssetId.Should().Be("asset-01");
     }
+
+    [Fact]
+    public void BookAccessRevokeRequest_Defaults_AreSafe()
+    {
+        var request = new BookAccessRevokeRequest();
+
+        request.BookId.Should().BeEmpty();
+        request.PrincipalId.Should().BeEmpty();
+        request.Reason.Should().BeNull();
+    }
+
+    [Fact]
+    public void RequestModels_AssignedValues_ArePreserved()
+    {
+        var from = DateTimeOffset.UtcNow.AddDays(-7);
+        var to = DateTimeOffset.UtcNow;
+
+        var analytics = new GetBookAnalyticsRequest
+        {
+            BookId = "book-22",
+            From = from,
+            To = to,
+            Granularity = "week",
+            IncludeUniqueReaders = false,
+        };
+
+        var audit = new ListBookAuditLogsRequest
+        {
+            BookId = "book-22",
+            ActorId = "actor-1",
+            Action = "book.updated",
+            From = from,
+            To = to,
+            CorrelationId = "corr-1",
+            Page = 2,
+            PageSize = 25,
+        };
+
+        analytics.BookId.Should().Be("book-22");
+        analytics.Granularity.Should().Be("week");
+        analytics.IncludeUniqueReaders.Should().BeFalse();
+        audit.Page.Should().Be(2);
+        audit.PageSize.Should().Be(25);
+        audit.CorrelationId.Should().Be("corr-1");
+    }
 }
