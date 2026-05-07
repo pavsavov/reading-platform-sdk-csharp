@@ -1,10 +1,8 @@
-using System.Diagnostics;
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients.BookDistribution.Requests;
 using PublishingPlatform.SDK.Clients.BookDistribution.Serialization;
 using PublishingPlatform.SDK.Clients.BookDistribution.Validation;
-using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal;
 using PublishingPlatform.SDK.Models;
@@ -54,7 +52,6 @@ public sealed class BookDistributionClient : IBookDistributionClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateStartRequest(request);
 
-        using var activity = StartActivity(StartOperationName);
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(idempotencyKey);
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
@@ -74,7 +71,6 @@ public sealed class BookDistributionClient : IBookDistributionClient
         _validator.ValidateBookId(bookId);
         _validator.ValidateOperationId(operationId);
 
-        using var activity = StartActivity(GetStatusOperationName);
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
             $"/books/{Uri.EscapeDataString(bookId)}/distribution/{Uri.EscapeDataString(operationId)}/status",
@@ -92,7 +88,6 @@ public sealed class BookDistributionClient : IBookDistributionClient
         _validator.ValidateBookId(bookId);
         _validator.ValidateOperationId(operationId);
 
-        using var activity = StartActivity(RetryOperationName);
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(idempotencyKey);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
@@ -110,7 +105,6 @@ public sealed class BookDistributionClient : IBookDistributionClient
     {
         _validator.ValidateBookId(bookId);
 
-        using var activity = StartActivity(ListOperationName);
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
             $"/books/{Uri.EscapeDataString(bookId)}/distribution",
@@ -120,12 +114,5 @@ public sealed class BookDistributionClient : IBookDistributionClient
             ct).ConfigureAwait(false);
 
         return await _responseReader.ReadListAsync(response, ct).ConfigureAwait(false);
-    }
-
-    private static Activity? StartActivity(string operationName)
-    {
-        var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
-        activity?.SetTag("sdk.operation", operationName);
-        return activity;
     }
 }

@@ -110,6 +110,7 @@ Runnable scripts are available in:
 
 - `examples/BasicUsage/BuilderInitializationExample.csx`
 - `examples/BasicUsage/DiInitializationExample.csx`
+- `examples/Diagnostics/README.md`
 - `examples/BookPublishing/BookPublishingExample.csx`
 - `examples/BookDistribution/BookDistributionExample.csx`
 - `examples/BookAnalytics/BookAnalyticsExample.csx`

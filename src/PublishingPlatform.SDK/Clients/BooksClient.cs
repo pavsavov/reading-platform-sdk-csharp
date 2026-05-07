@@ -1,11 +1,9 @@
-using System.Diagnostics;
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients.Common.Pagination;
 using PublishingPlatform.SDK.Clients.Books.Requests;
 using PublishingPlatform.SDK.Clients.Books.Serialization;
 using PublishingPlatform.SDK.Clients.Books.Validation;
-using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal;
 using PublishingPlatform.SDK.Models;
@@ -18,6 +16,13 @@ namespace PublishingPlatform.SDK.Clients;
 /// </summary>
 public sealed class BooksClient : IBooksClient
 {
+    private const string CreateOperationName = "Books.Create";
+    private const string GetByIdOperationName = "Books.GetById";
+    private const string ListOperationName = "Books.List";
+    private const string UpdateMetadataOperationName = "Books.UpdateMetadata";
+    private const string PatchMetadataOperationName = "Books.PatchMetadata";
+    private const string DeleteOperationName = "Books.Delete";
+
     private readonly ISharedHttpTransport _transport;
     private readonly IBookRequestValidator _validator;
     private readonly IBookQueryStringBuilder _queryStringBuilder;
@@ -54,10 +59,9 @@ public sealed class BooksClient : IBooksClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateCreate(request);
 
-        using var activity = StartActivity("Books.Create");
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(request.IdempotencyKey);
         var content = JsonContent.Create(request);
-        using var response = await _transport.SendAsync(HttpMethod.Post, "/books", content, headers, "Books.Create", ct).ConfigureAwait(false);
+        using var response = await _transport.SendAsync(HttpMethod.Post, "/books", content, headers, CreateOperationName, ct).ConfigureAwait(false);
 
         return await _responseReader.ReadBookAsync(response, ct).ConfigureAwait(false);
     }
@@ -66,8 +70,7 @@ public sealed class BooksClient : IBooksClient
     public async Task<Book> GetByIdAsync(string bookId, CancellationToken ct = default)
     {
         _validator.ValidateBookId(bookId);
-        using var activity = StartActivity("Books.GetById");
-        using var response = await _transport.SendAsync(HttpMethod.Get, $"/books/{Uri.EscapeDataString(bookId)}", null, null, "Books.GetById", ct).ConfigureAwait(false);
+        using var response = await _transport.SendAsync(HttpMethod.Get, $"/books/{Uri.EscapeDataString(bookId)}", null, null, GetByIdOperationName, ct).ConfigureAwait(false);
         return await _responseReader.ReadBookAsync(response, ct).ConfigureAwait(false);
     }
 
@@ -77,9 +80,8 @@ public sealed class BooksClient : IBooksClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateList(request);
 
-        using var activity = StartActivity("Books.List");
         var relativePath = _queryStringBuilder.BuildListPath(request);
-        using var response = await _transport.SendAsync(HttpMethod.Get, relativePath, null, null, "Books.List", ct).ConfigureAwait(false);
+        using var response = await _transport.SendAsync(HttpMethod.Get, relativePath, null, null, ListOperationName, ct).ConfigureAwait(false);
         return await _responseReader.ReadPagedResultAsync(response, ct).ConfigureAwait(false);
     }
 
@@ -108,10 +110,9 @@ public sealed class BooksClient : IBooksClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateUpdate(request);
 
-        using var activity = StartActivity("Books.UpdateMetadata");
         var headers = _requestHeadersFactory.CreateConcurrencyHeaders(request.ConcurrencyToken);
         var content = JsonContent.Create(request);
-        using var response = await _transport.SendAsync(HttpMethod.Put, $"/books/{Uri.EscapeDataString(bookId)}", content, headers, "Books.UpdateMetadata", ct).ConfigureAwait(false);
+        using var response = await _transport.SendAsync(HttpMethod.Put, $"/books/{Uri.EscapeDataString(bookId)}", content, headers, UpdateMetadataOperationName, ct).ConfigureAwait(false);
         return await _responseReader.ReadBookAsync(response, ct).ConfigureAwait(false);
     }
 
@@ -122,10 +123,9 @@ public sealed class BooksClient : IBooksClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidatePatch(request);
 
-        using var activity = StartActivity("Books.PatchMetadata");
         var headers = _requestHeadersFactory.CreateConcurrencyHeaders(request.ConcurrencyToken);
         var content = JsonContent.Create(request);
-        using var response = await _transport.SendAsync(HttpMethod.Patch, $"/books/{Uri.EscapeDataString(bookId)}", content, headers, "Books.PatchMetadata", ct).ConfigureAwait(false);
+        using var response = await _transport.SendAsync(HttpMethod.Patch, $"/books/{Uri.EscapeDataString(bookId)}", content, headers, PatchMetadataOperationName, ct).ConfigureAwait(false);
         return await _responseReader.ReadBookAsync(response, ct).ConfigureAwait(false);
     }
 
@@ -133,15 +133,7 @@ public sealed class BooksClient : IBooksClient
     public async Task DeleteAsync(string bookId, CancellationToken ct = default)
     {
         _validator.ValidateBookId(bookId);
-        using var activity = StartActivity("Books.Delete");
-        using var _ = await _transport.SendAsync(HttpMethod.Delete, $"/books/{Uri.EscapeDataString(bookId)}", null, null, "Books.Delete", ct).ConfigureAwait(false);
-    }
-
-    private static Activity? StartActivity(string operationName)
-    {
-        var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
-        activity?.SetTag("sdk.operation", operationName);
-        return activity;
+        using var _ = await _transport.SendAsync(HttpMethod.Delete, $"/books/{Uri.EscapeDataString(bookId)}", null, null, DeleteOperationName, ct).ConfigureAwait(false);
     }
 
     private static ListBooksRequest CloneListRequest(ListBooksRequest request)

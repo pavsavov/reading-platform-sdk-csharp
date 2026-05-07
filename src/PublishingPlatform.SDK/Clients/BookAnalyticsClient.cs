@@ -1,8 +1,6 @@
-using System.Diagnostics;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients.BookAnalytics.Serialization;
 using PublishingPlatform.SDK.Clients.BookAnalytics.Validation;
-using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal;
 using PublishingPlatform.SDK.Models;
@@ -14,6 +12,8 @@ namespace PublishingPlatform.SDK.Clients;
 /// </summary>
 public sealed class BookAnalyticsClient : IBookAnalyticsClient
 {
+    private const string GetSummaryOperationName = "BookAnalytics.GetSummary";
+
     private readonly ISharedHttpTransport _transport;
     private readonly IBookAnalyticsRequestValidator _validator;
     private readonly IBookAnalyticsQueryStringBuilder _queryStringBuilder;
@@ -48,23 +48,15 @@ public sealed class BookAnalyticsClient : IBookAnalyticsClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateGetSummary(request);
 
-        using var activity = StartActivity("BookAnalytics.GetSummary");
         var relativePath = _queryStringBuilder.BuildSummaryPath(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
             relativePath,
             null,
             null,
-            "BookAnalytics.GetSummary",
+            GetSummaryOperationName,
             cancellationToken).ConfigureAwait(false);
 
         return await _responseReader.ReadSummaryAsync(response, cancellationToken).ConfigureAwait(false);
-    }
-
-    private static Activity? StartActivity(string operationName)
-    {
-        var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
-        activity?.SetTag("sdk.operation", operationName);
-        return activity;
     }
 }

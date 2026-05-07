@@ -1,9 +1,7 @@
-using System.Diagnostics;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients.Common.Pagination;
 using PublishingPlatform.SDK.Clients.BookAuditLogs.Serialization;
 using PublishingPlatform.SDK.Clients.BookAuditLogs.Validation;
-using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal;
 using PublishingPlatform.SDK.Models;
@@ -51,7 +49,6 @@ public sealed class BookAuditLogsClient : IBookAuditLogsClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateList(request);
 
-        using var activity = StartActivity(ListOperationName);
         var relativePath = _queryStringBuilder.BuildListPath(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
@@ -82,13 +79,6 @@ public sealed class BookAuditLogsClient : IBookAuditLogsClient
             },
             ListAsync,
             cancellationToken);
-    }
-
-    private static Activity? StartActivity(string operationName)
-    {
-        var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
-        activity?.SetTag("sdk.operation", operationName);
-        return activity;
     }
 
     private static ListBookAuditLogsRequest CloneListRequest(ListBookAuditLogsRequest request)

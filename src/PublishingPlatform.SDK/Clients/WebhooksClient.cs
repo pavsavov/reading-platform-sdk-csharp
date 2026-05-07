@@ -1,11 +1,9 @@
-using System.Diagnostics;
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients.Common.Pagination;
 using PublishingPlatform.SDK.Clients.Webhooks.Requests;
 using PublishingPlatform.SDK.Clients.Webhooks.Serialization;
 using PublishingPlatform.SDK.Clients.Webhooks.Validation;
-using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 using PublishingPlatform.SDK.Internal;
 using PublishingPlatform.SDK.Models;
@@ -62,7 +60,6 @@ public sealed class WebhooksClient : IWebhooksClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateRegister(request);
 
-        using var activity = StartActivity(RegisterOperationName);
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(idempotencyKey);
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
@@ -84,7 +81,6 @@ public sealed class WebhooksClient : IWebhooksClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateUpdate(request);
 
-        using var activity = StartActivity(UpdateOperationName);
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Patch,
@@ -104,7 +100,6 @@ public sealed class WebhooksClient : IWebhooksClient
     {
         _validator.ValidateWebhookId(webhookId);
 
-        using var activity = StartActivity(DeleteOperationName);
         using var response = await _transport.SendAsync(
             HttpMethod.Delete,
             $"/webhooks/{Uri.EscapeDataString(webhookId)}",
@@ -122,7 +117,6 @@ public sealed class WebhooksClient : IWebhooksClient
         Guards.NotNull(request, nameof(request));
         _validator.ValidateList(request);
 
-        using var activity = StartActivity(ListOperationName);
         var relativePath = _queryStringBuilder.BuildListPath(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
@@ -149,13 +143,6 @@ public sealed class WebhooksClient : IWebhooksClient
             static (iterationRequest, continuationToken) => iterationRequest.ContinuationToken = continuationToken,
             ListAsync,
             cancellationToken);
-    }
-
-    private static Activity? StartActivity(string operationName)
-    {
-        var activity = ActivitySourceProvider.ActivitySource.StartActivity(operationName, ActivityKind.Client);
-        activity?.SetTag("sdk.operation", operationName);
-        return activity;
     }
 
     private static ListWebhooksRequest CloneListRequest(ListWebhooksRequest request)
