@@ -69,6 +69,30 @@ public sealed class RequestModelContractsTests
     }
 
     [Fact]
+    public void ListWebhooksRequest_Defaults_AreSafe()
+    {
+        var request = new ListWebhooksRequest();
+
+        request.PageSize.Should().Be(50);
+        request.ContinuationToken.Should().BeNull();
+        request.Event.Should().BeNull();
+        request.IsActive.Should().BeNull();
+    }
+
+    [Fact]
+    public void Webhook_Defaults_AreSafe()
+    {
+        var webhook = new Webhook();
+
+        webhook.Id.Should().BeEmpty();
+        webhook.EndpointUrl.Should().BeEmpty();
+        webhook.Events.Should().BeEmpty();
+        webhook.IsActive.Should().BeFalse();
+        webhook.SigningKeyId.Should().BeNull();
+        webhook.UpdatedAt.Should().BeNull();
+    }
+
+    [Fact]
     public void BookAccessRevokeRequest_Defaults_AreSafe()
     {
         var request = new BookAccessRevokeRequest();

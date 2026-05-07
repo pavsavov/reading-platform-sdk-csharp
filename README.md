@@ -243,18 +243,43 @@ Module accessor for webhook-oriented integration workflows.
 Current status:
 
 - Property is available on the root client.
-- Interface is currently a placeholder (no public operations yet in this SDK version).
+- `RegisterAsync(RegisterWebhookRequest, idempotencyKey, CancellationToken)` registers an HTTPS callback endpoint.
+- `UpdateAsync(UpdateWebhookRequest, CancellationToken)` updates endpoint settings and subscribed events.
+- `DeleteAsync(webhookId, CancellationToken)` removes a webhook registration.
+- `ListAsync(ListWebhooksRequest, CancellationToken)` lists webhook registrations with optional filters.
 
-Typical use cases once expanded:
+Typical use cases:
 
 - Registering callback endpoints.
 - Receiving event notifications for asynchronous platform events.
+- Keeping external systems synchronized with book lifecycle, publishing, and distribution changes.
+
+Example:
+
+```csharp
+var webhook = await client.Webhooks.RegisterAsync(
+    new RegisterWebhookRequest
+    {
+        EndpointUrl = "https://hooks.example.com/publishing-platform",
+        Events = ["book.published", "book.distribution.completed"],
+        IsActive = true,
+        SigningKeyId = "signing-key-01",
+    },
+    idempotencyKey: "webhook-registration-001");
+
+var page = await client.Webhooks.ListAsync(new ListWebhooksRequest
+{
+    Event = "book.published",
+    IsActive = true,
+});
+```
 
 ## Which module should I use?
 
 - Use `Books` today for production book CRUD/listing flows.
 - Use `BookPublishing` when you need lifecycle state transitions (`publish`, `unpublish`, `schedule`).
 - Use `BookDistribution` when you need downstream propagation and operational delivery tracking.
+- Use `Webhooks` when external systems need asynchronous platform event notifications.
 
 ## Publishing vs distribution architecture
 
