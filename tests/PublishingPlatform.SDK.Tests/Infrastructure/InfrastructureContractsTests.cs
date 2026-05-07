@@ -1,4 +1,3 @@
-using PublishingPlatform.SDK.Infrastructure.Auth;
 using PublishingPlatform.SDK.Infrastructure.Diagnostics;
 using PublishingPlatform.SDK.Infrastructure.GoogleBooks;
 using PublishingPlatform.SDK.Infrastructure.Http.Handlers;
@@ -12,21 +11,11 @@ namespace PublishingPlatform.SDK.Tests.Infrastructure;
 public sealed class InfrastructureContractsTests
 {
     [Fact]
-    public async Task ApiKeyTokenProvider_ReturnsConfiguredToken()
-    {
-        var provider = new ApiKeyTokenProvider("api-key");
-
-        var token = await provider.GetTokenAsync(CancellationToken.None);
-
-        token.Should().Be("api-key");
-    }
-
-    [Fact]
     public void HttpPipelinePolicy_ExposesExpectedHandlerOrder()
     {
         var policy = new HttpPipelinePolicy();
 
-        policy.HandlerOrder.Should().Equal("AuthHandler", "CorrelationHandler", "DiagnosticsHandler");
+        policy.HandlerOrder.Should().Equal("ApiKeyAuthHandler", "CorrelationHandler", "DiagnosticsHandler");
     }
 
     [Fact]

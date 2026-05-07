@@ -6,6 +6,11 @@ namespace PublishingPlatform.SDK.Infrastructure.Transport;
 internal static class TransportHeaderNames
 {
     /// <summary>
+    /// API key header used to authenticate SDK requests with the backend API.
+    /// </summary>
+    internal const string ApiKey = "X-API-Key";
+
+    /// <summary>
     /// Correlation header used to propagate request tracing context.
     /// </summary>
     internal const string CorrelationId = "X-Correlation-Id";

@@ -10,7 +10,7 @@ public sealed class HttpPipelinePolicy
     /// </summary>
     public IReadOnlyList<string> HandlerOrder { get; } =
     [
-        nameof(AuthHandler),
+        nameof(ApiKeyAuthHandler),
         nameof(CorrelationHandler),
         nameof(DiagnosticsHandler),
     ];
