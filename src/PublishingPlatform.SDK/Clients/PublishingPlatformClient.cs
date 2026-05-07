@@ -18,7 +18,6 @@ public sealed class PublishingPlatformClient : IPublishingPlatformClient
     /// <param name="bookAccess">The book access module client.</param>
     /// <param name="bookAnalytics">The book analytics module client.</param>
     /// <param name="bookAuditLogs">The book audit logs module client.</param>
-    /// <param name="bookAssets">The book assets module client.</param>
     /// <param name="webhooks">The webhooks module client.</param>
     public PublishingPlatformClient(
         IBooksClient books,
@@ -28,7 +27,6 @@ public sealed class PublishingPlatformClient : IPublishingPlatformClient
         IBookAccessClient bookAccess,
         IBookAnalyticsClient bookAnalytics,
         IBookAuditLogsClient bookAuditLogs,
-        IBookAssetsClient bookAssets,
         IWebhooksClient webhooks)
     {
         Books = books;
@@ -38,7 +36,6 @@ public sealed class PublishingPlatformClient : IPublishingPlatformClient
         BookAccess = bookAccess;
         BookAnalytics = bookAnalytics;
         BookAuditLogs = bookAuditLogs;
-        BookAssets = bookAssets;
         Webhooks = webhooks;
     }
 
@@ -55,8 +52,6 @@ public sealed class PublishingPlatformClient : IPublishingPlatformClient
     public IBookAnalyticsClient BookAnalytics { get; }
 
     public IBookAuditLogsClient BookAuditLogs { get; }
-
-    public IBookAssetsClient BookAssets { get; }
 
     public IWebhooksClient Webhooks { get; }
 
@@ -78,7 +73,6 @@ public sealed class PublishingPlatformClient : IPublishingPlatformClient
             new BookAccessClient(transport),
             new BookAnalyticsClient(transport),
             new BookAuditLogsClient(transport),
-            new BookAssetsClient(transport),
             new WebhooksClient(transport));
     }
 }

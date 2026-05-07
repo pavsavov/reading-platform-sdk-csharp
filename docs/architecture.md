@@ -15,7 +15,6 @@ The current implementation provides the shared client foundation. The deeper boo
 - `BookAccess`
 - `BookAnalytics`
 - `BookAuditLogs`
-- `BookAssets`
 - `Webhooks`
 
 The module clients are wired through dependency injection and the direct builder path. Their concrete classes currently share the same internal transport foundation, while detailed module operations continue to expand through the implementation backlog. `BookAccess` now provides concrete entitlement operations (grant, revoke, check, list) on top of this shared transport.
