@@ -26,6 +26,19 @@ All module clients should use the shared internal HTTP transport. This trades so
 
 The benefit is a single place for correlation IDs, JSON request conventions, resilience, and error normalization. Module clients should focus on request validation, endpoint shape, and response mapping.
 
+## Publishing Lifecycle And Distribution Workflow Separation
+
+Status: Accepted.
+
+Publishing and distribution are separate concerns in the SDK surface.
+
+- Publishing is domain lifecycle state transition (`Publish`, `Unpublish`, `Schedule`, lifecycle status).
+- Distribution is operational propagation workflow (`Start`, `GetStatus`, `Retry`, list operations/history).
+
+Both concerns correlate through `bookId`, while distribution additionally introduces an `operationId` for long-running delivery tracking.
+
+This avoids overloaded "publish" behavior, improves retry safety, and isolates downstream partner failures from lifecycle state management.
+
 ## Options Pattern And Direct Builder
 
 Status: Accepted.

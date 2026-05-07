@@ -111,6 +111,7 @@ Runnable scripts are available in:
 - `examples/BasicUsage/BuilderInitializationExample.csx`
 - `examples/BasicUsage/DiInitializationExample.csx`
 - `examples/BookPublishing/BookPublishingExample.csx`
+- `examples/BookDistribution/BookDistributionExample.csx`
 
 ## Client modules: available properties and use cases
 
@@ -173,16 +174,18 @@ Typical use cases:
 
 Module accessor for downstream distribution workflows.
 
-Current status:
+Available operations:
 
-- Property is available on the root client.
-- Interface is currently a placeholder (no public operations yet in this SDK version).
-- Strongly typed request models are available for upcoming analytics queries (`GetBookAnalyticsRequest`).
+- `StartAsync(...)`: start distribution to one or more channels.
+- `GetStatusAsync(...)`: fetch the current state of a distribution operation.
+- `RetryAsync(...)`: retry a previous distribution operation.
+- `ListAsync(...)`: list tracked distribution operations for a book.
 
-Typical use cases once expanded:
+Typical use cases:
 
-- Pushing books to channels/partners.
-- Tracking distribution outcome and status.
+- Pushing published books to partner channels, mobile catalog feeds, and CDN-oriented pipelines.
+- Tracking long-running delivery progress and failures by operation id.
+- Retrying failed distribution workflows without re-running the publishing lifecycle.
 
 ### `BookAccess` (`IBookAccessClient`)
 
@@ -260,7 +263,50 @@ Typical use cases once expanded:
 ## Which module should I use?
 
 - Use `Books` today for production book CRUD/listing flows.
-- Use other module properties as stable access points in your codebase while their operation surfaces are being expanded in upcoming SDK iterations.
+- Use `BookPublishing` when you need lifecycle state transitions (`publish`, `unpublish`, `schedule`).
+- Use `BookDistribution` when you need downstream propagation and operational delivery tracking.
+
+## Publishing vs distribution architecture
+
+`BookPublishing` and `BookDistribution` are intentionally separate concerns.
+
+- `BookPublishing` controls domain lifecycle state (`Draft -> Published`, schedule, unpublish).
+- `BookDistribution` controls operational delivery workflows (channel propagation, retries, status polling, operation history).
+
+Correlation model:
+
+- Shared identity: both modules operate on the same `bookId`.
+- Independent state machines: publishing status and distribution status are tracked separately.
+- Long-running traceability: distribution returns an `operationId` used for polling, retries, and diagnostics.
+- Business precondition: successful publication is a backend precondition for distribution, not a client-side coupling.
+
+This separation improves observability, retry safety, and failure isolation for partner/channel sync workflows.
+
+### Side-by-side API usage
+
+```csharp
+var publishingStatus = await client.BookPublishing.PublishAsync(
+    bookId,
+    new PublishBookRequest { Notes = "Ready for release" },
+    idempotencyKey: "pub-001");
+
+if (!string.Equals(publishingStatus.Status, "published", StringComparison.OrdinalIgnoreCase))
+{
+    return;
+}
+
+var distributionStart = await client.BookDistribution.StartAsync(
+    bookId,
+    new StartBookDistributionRequest
+    {
+        Channels = ["mobile", "partner-store"],
+    },
+    idempotencyKey: "dist-001");
+
+var distributionStatus = await client.BookDistribution.GetStatusAsync(
+    bookId,
+    distributionStart.OperationId);
+```
 
 ## Books lifecycle usage
 
