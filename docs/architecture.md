@@ -59,7 +59,7 @@ This central transport is intentional. It reduces per-client drift and makes fut
 
 Resilience is opt-in. The default behavior is a no-op pipeline so consumers do not get retries or circuit breaking unless they configure them.
 
-When enabled, resilience can include retry, circuit breaker, attempt timeout, and total timeout behavior. Retry behavior must remain conservative: transient failures can be retried, while unsafe operations need idempotency-aware handling before retries are expanded.
+When enabled, resilience can include retry, circuit breaker, attempt timeout, and total timeout behavior. Retry behavior remains conservative: transient failures can be retried, while non-idempotent operations (`POST`, `PATCH`) require explicit opt-in, an idempotency key, and replay-safe content before retries are applied.
 
 ## Error Mapping
 

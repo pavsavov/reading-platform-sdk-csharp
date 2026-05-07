@@ -14,4 +14,9 @@ internal static class TransportHeaderNames
     /// Correlation header used to propagate request tracing context.
     /// </summary>
     internal const string CorrelationId = "X-Correlation-Id";
+
+    /// <summary>
+    /// Idempotency header used for retry-safe mutating operations.
+    /// </summary>
+    internal const string IdempotencyKey = "Idempotency-Key";
 }

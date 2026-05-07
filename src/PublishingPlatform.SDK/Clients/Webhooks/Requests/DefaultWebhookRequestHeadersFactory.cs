@@ -1,3 +1,5 @@
+using PublishingPlatform.SDK.Infrastructure.Transport;
+
 namespace PublishingPlatform.SDK.Clients.Webhooks.Requests;
 
 /// <summary>
@@ -5,8 +7,6 @@ namespace PublishingPlatform.SDK.Clients.Webhooks.Requests;
 /// </summary>
 internal sealed class DefaultWebhookRequestHeadersFactory : IWebhookRequestHeadersFactory
 {
-    private const string IdempotencyHeaderName = "Idempotency-Key";
-
     /// <inheritdoc />
     public IReadOnlyDictionary<string, string>? CreateIdempotencyHeaders(string? idempotencyKey)
     {
@@ -17,7 +17,7 @@ internal sealed class DefaultWebhookRequestHeadersFactory : IWebhookRequestHeade
 
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            [IdempotencyHeaderName] = idempotencyKey,
+            [TransportHeaderNames.IdempotencyKey] = idempotencyKey,
         };
     }
 }
