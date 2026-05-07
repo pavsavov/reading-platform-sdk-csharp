@@ -26,7 +26,7 @@ public sealed class BookDistributionClientTests
                 Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new BookDistributionOperation { BookId = "book-1", OperationId = "op-1", Status = DistributionStatus.Pending }),
+                Content = JsonContent.Create(new BookDistributionOperation { BookId = "book-1", OperationId = "op-1", Status = "pending" }),
             }));
 
         var sut = new BookDistributionClient(transport);
@@ -56,14 +56,14 @@ public sealed class BookDistributionClientTests
                 Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new BookDistributionOperation { BookId = "book-2", OperationId = "op-9", Status = DistributionStatus.Completed }),
+                Content = JsonContent.Create(new BookDistributionOperation { BookId = "book-2", OperationId = "op-9", Status = "completed" }),
             }));
 
         var sut = new BookDistributionClient(transport);
 
         var result = await sut.GetStatusAsync("book-2", "op-9");
 
-        result.Status.Should().Be(DistributionStatus.Completed);
+        result.Status.Should().Be("completed");
         await transport.Received(1).SendAsync(
             HttpMethod.Get,
             "/books/book-2/distribution/op-9/status",
@@ -86,14 +86,14 @@ public sealed class BookDistributionClientTests
                 Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new BookDistributionOperation { BookId = "book-3", OperationId = "op-7", Status = DistributionStatus.InProgress }),
+                Content = JsonContent.Create(new BookDistributionOperation { BookId = "book-3", OperationId = "op-7", Status = "in_progress" }),
             }));
 
         var sut = new BookDistributionClient(transport);
 
         var result = await sut.RetryAsync("book-3", "op-7", "idem-retry");
 
-        result.Status.Should().Be(DistributionStatus.InProgress);
+        result.Status.Should().Be("in_progress");
         await transport.Received(1).SendAsync(
             HttpMethod.Post,
             "/books/book-3/distribution/op-7/retry",
@@ -120,7 +120,7 @@ public sealed class BookDistributionClientTests
                 {
                     Operations =
                     [
-                        new BookDistributionOperation { BookId = "book-4", OperationId = "op-1", Status = DistributionStatus.Pending },
+                        new BookDistributionOperation { BookId = "book-4", OperationId = "op-1", Status = "pending" },
                     ],
                 }),
             }));
@@ -130,6 +130,7 @@ public sealed class BookDistributionClientTests
         var result = await sut.ListAsync("book-4");
 
         result.Operations.Should().HaveCount(1);
+        result.Operations[0].Status.Should().Be("pending");
         await transport.Received(1).SendAsync(
             HttpMethod.Get,
             "/books/book-4/distribution",
@@ -195,6 +196,25 @@ public sealed class BookDistributionClientTests
 
         var ex = await act.Should().ThrowAsync<BookValidationException>();
         ex.Which.Message.Should().Contain("Distribution operation id is required");
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_PreservesStringStatusFromJsonResponse()
+    {
+        using var handler = new SingleResponseHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                "{\"operationId\":\"op-string\",\"bookId\":\"book-string\",\"status\":\"queued_for_partner_review\"}",
+                Encoding.UTF8,
+                "application/json"),
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var transport = new SharedHttpTransport(client, new NoOpPublishingPlatformResiliencePipeline(), new FixedCorrelationIdProvider(), new DefaultPublishingPlatformErrorMapper());
+        var sut = new BookDistributionClient(transport);
+
+        var result = await sut.GetStatusAsync("book-string", "op-string");
+
+        result.Status.Should().Be("queued_for_partner_review");
     }
 
     [Fact]

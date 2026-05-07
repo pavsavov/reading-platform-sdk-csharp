@@ -143,13 +143,12 @@ Typical use cases:
 
 Module accessor for book content workflows (for example upload, replacement, or content-related actions).
 
-Current status:
+Available operations:
 
-- Property is available on the root client.
-- Interface is currently a placeholder (no public operations yet in this SDK version).
-- Strongly typed request models are available for upcoming access operations (`BookAccessGrantRequest`, `BookAccessRevokeRequest`).
+- `GetAsync(...)`: retrieve content metadata for a book.
+- `UploadOrReplaceAsync(...)`: upload or replace book content and return the updated content metadata.
 
-Typical use cases once expanded:
+Typical use cases:
 
 - Uploading source content for books.
 - Replacing or versioning stored content artifacts.
@@ -225,13 +224,11 @@ Typical use cases once expanded:
 
 Module accessor for audit trail workflows.
 
-Current status:
+Available operations:
 
-- Property is available on the root client.
-- Interface is currently a placeholder (no public operations yet in this SDK version).
-- Strongly typed request models are available for upcoming webhook registration and management (`RegisterWebhookRequest`, `UpdateWebhookRequest`).
+- `ListAsync(...)`: list paged audit log entries with optional filtering criteria.
 
-Typical use cases once expanded:
+Typical use cases:
 
 - Compliance-oriented activity history.
 - Operational troubleshooting and traceability.
@@ -297,6 +294,8 @@ Correlation model:
 
 This separation improves observability, retry safety, and failure isolation for partner/channel sync workflows.
 
+Status values returned by publishing and distribution responses are exposed as strings instead of enums. Backend status sets can grow independently of SDK releases, and strings preserve new or channel-specific values without deserialization failures. Consumers should compare known status values case-insensitively and handle unknown values as valid future API responses.
+
 ### Side-by-side API usage
 
 ```csharp
@@ -321,6 +320,11 @@ var distributionStart = await client.BookDistribution.StartAsync(
 var distributionStatus = await client.BookDistribution.GetStatusAsync(
     bookId,
     distributionStart.OperationId);
+
+if (string.Equals(distributionStatus.Status, "failed", StringComparison.OrdinalIgnoreCase))
+{
+    // Inspect FailureReason or retry according to your workflow.
+}
 ```
 
 ## Books lifecycle usage
