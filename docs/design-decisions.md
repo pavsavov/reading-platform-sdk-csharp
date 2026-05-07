@@ -10,6 +10,8 @@ The SDK focuses on the book lifecycle before expanding into broader publishing d
 
 This keeps the SDK useful for real partner workflows instead of spreading effort across shallow generic API wrappers.
 
+Tradeoff: the SDK intentionally delays adjacent publishing capabilities until the book workflow is reliable end to end.
+
 ## REST-Only SDK Surface
 
 Status: Accepted.
@@ -25,6 +27,8 @@ Status: Accepted.
 All module clients should use the shared internal HTTP transport. This trades some per-client flexibility for consistency.
 
 The benefit is a single place for correlation IDs, JSON request conventions, resilience, and error normalization. Module clients should focus on request validation, endpoint shape, and response mapping.
+
+Tradeoff: consumers get fewer module-specific HTTP customization seams, but every module observes the same security, diagnostics, retry, and error rules.
 
 ## Publishing Lifecycle And Distribution Workflow Separation
 
@@ -57,6 +61,8 @@ Resilience is disabled by default. Consumers must explicitly enable retry, circu
 
 Retries must remain conservative because some operations can have side effects. Future unsafe operations should require idempotency-aware design before they are retried automatically.
 
+Tradeoff: default behavior may surface transient failures instead of hiding them, but it avoids duplicate side effects for publishing, distribution, webhook, and content operations.
+
 ## Central Error Mapping
 
 Status: Accepted.
@@ -64,6 +70,8 @@ Status: Accepted.
 The SDK uses `IPublishingPlatformErrorMapper` as the single extension point for API error conversion.
 
 The default mapper returns `ApiException` for generic API failures and typed book exceptions for common book-centric HTTP failures. Consumers can replace it when they need domain-specific exceptions, but the transport should still provide the same normalized context.
+
+Tradeoff: errors are normalized before module-specific interpretation, which keeps behavior consistent while requiring mapper customization for highly specialized consumer exceptions.
 
 ## Provider-Hidden Query Architecture
 
@@ -104,6 +112,8 @@ Diagnostics should be safe by default. Correlation IDs and Activity-based tracin
 
 Diagnostics work is still evolving, so docs and implementation should avoid promising full logging, metrics, or per-module override behavior until those tickets are complete.
 
+Tradeoff: default diagnostics favor privacy over complete payload visibility. Consumers should use backend logs or explicit future diagnostics options for deeper inspection.
+
 ## Strong Typing And Manual Mapping
 
 Status: Accepted direction.
@@ -111,3 +121,5 @@ Status: Accepted direction.
 Public SDK models should be strongly typed and platform-owned. Mapping should stay explicit and manual through focused code, not AutoMapper or hidden reflection-based mapping.
 
 This keeps the public contract stable and makes future provider integrations, including query sources, easier to isolate.
+
+Tradeoff: strict SDK-owned models require deliberate schema updates, while selected string fields preserve compatibility with backend-owned value sets that can grow independently.

@@ -110,6 +110,7 @@ Runnable scripts are available in:
 
 - `examples/BasicUsage/BuilderInitializationExample.csx`
 - `examples/BasicUsage/DiInitializationExample.csx`
+- `examples/ArchitectureTradeoffs/ArchitectureTradeoffsExample.csx`
 - `examples/Diagnostics/README.md`
 - `examples/BookPublishing/BookPublishingExample.csx`
 - `examples/BookDistribution/BookDistributionExample.csx`
@@ -308,6 +309,20 @@ Correlation model:
 This separation improves observability, retry safety, and failure isolation for partner/channel sync workflows.
 
 Status values returned by publishing and distribution responses are exposed as strings instead of enums. Backend status sets can grow independently of SDK releases, and strings preserve new or channel-specific values without deserialization failures. Consumers should compare known status values case-insensitively and handle unknown values as valid future API responses.
+
+## Architecture tradeoffs
+
+The SDK deliberately chooses depth over breadth. The current surface goes deep on book lifecycle workflows: catalog metadata, content, publishing, distribution, access, analytics, audit logs, and webhooks. Broader publishing domains should be added only when they support that lifecycle instead of turning the SDK into a shallow generic wrapper.
+
+All modules use a central internal transport. This trades away per-client HTTP pipeline customization so correlation IDs, HTTPS enforcement, resilience, diagnostics, authentication, and error normalization stay consistent. Module clients remain responsible for orchestration, validation, endpoint shape, and response mapping.
+
+Public models are strict, platform-owned SDK contracts. Provider-specific payloads, including Google Books-derived wire shapes, stay internal. Some backend-grown value sets, such as publishing and distribution status strings, intentionally remain strings so new server values do not break older consumers.
+
+Retry defaults are conservative. Retries are opt-in, idempotent methods are the default safe retry target, and non-idempotent `POST` or `PATCH` retries require explicit configuration plus an `Idempotency-Key` when replay is possible. Mutating examples use idempotency keys because duplicate publishing, distribution, or webhook operations are worse than a visible transient failure.
+
+Diagnostics are privacy-preserving by default. Logging, tracing, and metrics are opt-in, and request bodies, response bodies, API keys, authorization headers, idempotency keys, download URLs, uploaded content, and user/customer identifiers are excluded unless a future explicit option states otherwise.
+
+Errors are normalized at the transport boundary before exception mapping. The default mapper returns structured SDK exceptions with status, error code, request ID, correlation ID, operation name, method, path, and message. Consumers can replace the mapper while keeping the same normalized error context.
 
 ### Side-by-side API usage
 
