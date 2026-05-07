@@ -138,6 +138,43 @@ permissions:
 - Keep exactly one class per file.
 - Treat public, non-base implementations as SDK building blocks with self-documenting naming.
 
+## Refactor and Polishing Policy
+
+Use this section for cleanup work that improves maintainability without changing intended public behavior.
+
+- Preserve public API compatibility unless the ticket explicitly approves a breaking change.
+- Keep refactors behavior-preserving and covered by existing or added regression tests.
+- Prefer simplifying existing collaborators over introducing new abstractions.
+- Do not mix polish with unrelated feature work.
+- Do not rewrite working architecture just for style consistency.
+- When touching validation, mapping, transport, diagnostics, or serialization, preserve the existing responsibility boundaries.
+- If a refactor changes observable behavior, document it as a behavior change, not polish.
+- Public SDK entry points must fail fast for obvious invalid consumer arguments before issuing HTTP requests.
+- Use internal validation helpers for generic argument checks:
+  - null request objects
+  - null streams
+  - null required objects
+  - null, empty, or whitespace identifiers
+  - invalid pagination bounds
+- Prefer `CallerArgumentExpression`-based helper methods so parameter names stay accurate without repeated `nameof(...)` boilerplate.
+- Keep throw helpers internal; do not expose validation helpers as public SDK API.
+- Generic argument faults should use standard argument exceptions:
+  - `ArgumentNullException` for null required objects
+  - `ArgumentException` for empty or whitespace required strings
+  - `ArgumentOutOfRangeException` for invalid numeric ranges
+- Keep module/domain validation in dedicated validator collaborators.
+- Use SDK/domain exceptions, such as `BookValidationException`, only for SDK-owned request semantics or response-shape validation, not for simple null argument guards.
+- Do not validate backend-owned business rules in the SDK.
+
+Refactor completion checklist:
+
+- Public contracts reviewed for accidental signature, default, or exception changes.
+- Regression tests prove behavior stayed equivalent or intentionally changed.
+- Existing architecture boundaries preserved or improved.
+- No unrelated formatting churn.
+- No new dependency introduced without explicit approval.
+- PR notes explain the cleanup intent and any deliberate tradeoffs.
+
 ## Architecture Responsibility Budget (Mandatory)
 
 - Every new or changed class must declare one primary responsibility in a single line:
