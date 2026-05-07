@@ -145,6 +145,7 @@ Current status:
 
 - Property is available on the root client.
 - Interface is currently a placeholder (no public operations yet in this SDK version).
+- Strongly typed request models are available for upcoming access operations (`BookAccessGrantRequest`, `BookAccessRevokeRequest`).
 
 Typical use cases once expanded:
 
@@ -176,6 +177,7 @@ Current status:
 
 - Property is available on the root client.
 - Interface is currently a placeholder (no public operations yet in this SDK version).
+- Strongly typed request models are available for upcoming analytics queries (`GetBookAnalyticsRequest`).
 
 Typical use cases once expanded:
 
@@ -190,6 +192,7 @@ Current status:
 
 - Property is available on the root client.
 - Interface is currently a placeholder (no public operations yet in this SDK version).
+- Strongly typed request models are available for upcoming audit log queries (`ListBookAuditLogsRequest`).
 
 Typical use cases once expanded:
 
@@ -204,6 +207,7 @@ Current status:
 
 - Property is available on the root client.
 - Interface is currently a placeholder (no public operations yet in this SDK version).
+- Strongly typed request models are available for upcoming asset operations (`UploadBookAssetRequest`, `DeleteBookAssetRequest`).
 
 Typical use cases once expanded:
 
@@ -218,6 +222,7 @@ Current status:
 
 - Property is available on the root client.
 - Interface is currently a placeholder (no public operations yet in this SDK version).
+- Strongly typed request models are available for upcoming webhook registration and management (`RegisterWebhookRequest`, `UpdateWebhookRequest`).
 
 Typical use cases once expanded:
 
