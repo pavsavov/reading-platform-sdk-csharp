@@ -63,7 +63,7 @@ When enabled, resilience can include retry, circuit breaker, attempt timeout, an
 
 ## Error Mapping
 
-Error handling is centralized through `IPublishingPlatformErrorMapper`. The default mapper returns an `ApiException` with the HTTP status code and normalized message. Consumers can provide a custom mapper for domain-specific exception types.
+Error handling is centralized through `IPublishingPlatformErrorMapper`. The default mapper returns exceptions derived from `PublishingPlatformApiException`, with HTTP status code, normalized error code, request ID, correlation ID, operation name, method, path, and normalized message. Consumers can provide a custom mapper for domain-specific exception types.
 
 The error handling contract should stay module-independent so every client follows the same failure rules.
 

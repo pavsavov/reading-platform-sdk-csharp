@@ -8,7 +8,7 @@ internal sealed class DefaultTransportErrorContextFactory : ITransportErrorConte
         HttpMethod method,
         string relativePath,
         int statusCode,
-        string message,
+        NormalizedTransportError error,
         string? correlationId,
         string? operationName)
     {
@@ -17,8 +17,10 @@ internal sealed class DefaultTransportErrorContextFactory : ITransportErrorConte
             Method = method,
             RelativePath = relativePath,
             StatusCode = statusCode,
-            Message = message,
-            CorrelationId = correlationId,
+            Message = error.Message,
+            ErrorCode = error.ErrorCode,
+            RequestId = error.RequestId,
+            CorrelationId = string.IsNullOrWhiteSpace(error.CorrelationId) ? correlationId : error.CorrelationId,
             OperationName = operationName,
         };
     }

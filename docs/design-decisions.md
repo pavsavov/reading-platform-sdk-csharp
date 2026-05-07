@@ -63,7 +63,7 @@ Status: Accepted.
 
 The SDK uses `IPublishingPlatformErrorMapper` as the single extension point for API error conversion.
 
-The default mapper returns `ApiException`. Consumers can replace it when they need domain-specific exceptions, but the transport should still provide the same normalized context.
+The default mapper returns `ApiException` for generic API failures and typed book exceptions for common book-centric HTTP failures. Consumers can replace it when they need domain-specific exceptions, but the transport should still provide the same normalized context.
 
 ## Provider-Hidden Query Architecture
 

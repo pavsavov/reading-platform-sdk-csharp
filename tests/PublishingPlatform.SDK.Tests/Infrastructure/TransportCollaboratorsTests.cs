@@ -28,33 +28,70 @@ public sealed class TransportCollaboratorsTests
             Content = new StringContent("oops"),
         };
 
-        var message = await reader.ReadAsync(response, CancellationToken.None);
+        var error = await reader.ReadAsync(response, CancellationToken.None);
 
-        message.Should().Contain("HTTP 502");
+        error.Message.Should().Be("HTTP 502 returned by Publishing Platform API.");
+        error.ErrorCode.Should().Be("http_502");
+        error.RequestId.Should().BeNull();
+        error.CorrelationId.Should().BeNull();
     }
 
     [Fact]
-    public async Task ResponseErrorReader_UsesPayloadMessage_WhenPresent()
+    public async Task ResponseErrorReader_UsesNormalizedPayloadFields_WhenPresent()
     {
         var reader = new DefaultTransportResponseErrorReader();
         using var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
         {
-            Content = JsonContent.Create(new { Message = "invalid" }),
+            Content = JsonContent.Create(new
+            {
+                Message = "invalid",
+                ErrorCode = "book.invalid",
+                RequestId = "req-1",
+                CorrelationId = "corr-from-api",
+            }),
         };
 
-        var message = await reader.ReadAsync(response, CancellationToken.None);
+        var error = await reader.ReadAsync(response, CancellationToken.None);
 
-        message.Should().Be("invalid");
+        error.Message.Should().Be("invalid");
+        error.ErrorCode.Should().Be("book.invalid");
+        error.RequestId.Should().Be("req-1");
+        error.CorrelationId.Should().Be("corr-from-api");
     }
 
     [Fact]
-    public void ErrorContextFactory_PreservesOperationName()
+    public async Task ResponseErrorReader_FallsBackForUnknownPayloadShape()
+    {
+        var reader = new DefaultTransportResponseErrorReader();
+        using var response = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = JsonContent.Create(new { Detail = "shape not normalized" }),
+        };
+
+        var error = await reader.ReadAsync(response, CancellationToken.None);
+
+        error.Message.Should().Be("HTTP 500 returned by Publishing Platform API.");
+        error.ErrorCode.Should().Be("http_500");
+    }
+
+    [Fact]
+    public void ErrorContextFactory_PreservesNormalizedMetadata()
     {
         var factory = new DefaultTransportErrorContextFactory();
+        var error = new NormalizedTransportError
+        {
+            Message = "x",
+            ErrorCode = "book.failed",
+            RequestId = "req-1",
+            CorrelationId = "api-corr",
+        };
 
-        PublishingPlatformErrorContext context = factory.Create(HttpMethod.Get, "/books", 500, "x", "corr", "Books.List");
+        PublishingPlatformErrorContext context = factory.Create(HttpMethod.Get, "/books", 500, error, "generated-corr", "Books.List");
 
         context.OperationName.Should().Be("Books.List");
-        context.CorrelationId.Should().Be("corr");
+        context.CorrelationId.Should().Be("api-corr");
+        context.RequestId.Should().Be("req-1");
+        context.ErrorCode.Should().Be("book.failed");
+        context.Message.Should().Be("x");
     }
 }

@@ -5,7 +5,7 @@ namespace PublishingPlatform.SDK.Infrastructure.Transport.Errors;
 
 internal sealed class DefaultTransportResponseErrorReader : ITransportResponseErrorReader
 {
-    public async Task<string> ReadAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    public async Task<NormalizedTransportError> ReadAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         TransportErrorResponse? payload = null;
         try
@@ -17,11 +17,20 @@ internal sealed class DefaultTransportResponseErrorReader : ITransportResponseEr
             // Fallback message is returned below.
         }
 
-        if (payload is not null && !string.IsNullOrWhiteSpace(payload.Message))
-        {
-            return payload.Message;
-        }
+        var statusCode = (int)response.StatusCode;
+        var message = payload is not null && !string.IsNullOrWhiteSpace(payload.Message)
+            ? payload.Message
+            : $"HTTP {statusCode} returned by Publishing Platform API.";
+        var errorCode = payload is not null && !string.IsNullOrWhiteSpace(payload.ErrorCode)
+            ? payload.ErrorCode
+            : $"http_{statusCode}";
 
-        return $"HTTP {(int)response.StatusCode} returned by Publishing Platform API.";
+        return new NormalizedTransportError
+        {
+            Message = message,
+            ErrorCode = errorCode,
+            CorrelationId = payload?.CorrelationId,
+            RequestId = payload?.RequestId,
+        };
     }
 }

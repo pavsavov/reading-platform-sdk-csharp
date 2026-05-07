@@ -173,12 +173,12 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
             LogRequestCompleted(diagnosticsContext, response, elapsed);
             RecordMetrics(diagnosticsContext, response, elapsed, attempts);
 
-            var message = await _responseErrorReader.ReadAsync(response, cancellationToken).ConfigureAwait(false);
+            var error = await _responseErrorReader.ReadAsync(response, cancellationToken).ConfigureAwait(false);
             var context = _errorContextFactory.Create(
                 method,
                 relativePath,
                 (int)response.StatusCode,
-                message,
+                error,
                 correlationId,
                 operationName);
 
