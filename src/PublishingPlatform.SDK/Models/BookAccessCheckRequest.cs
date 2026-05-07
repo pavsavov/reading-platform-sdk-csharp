@@ -1,9 +1,9 @@
 namespace PublishingPlatform.SDK.Models;
 
 /// <summary>
-/// Represents a request to revoke access from a book principal.
+/// Represents a request to check whether a principal can access a book.
 /// </summary>
-public sealed class BookAccessRevokeRequest
+public sealed class BookAccessCheckRequest
 {
     /// <summary>
     /// Gets or sets the book identifier.
@@ -11,17 +11,12 @@ public sealed class BookAccessRevokeRequest
     public string BookId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the principal identifier losing access.
+    /// Gets or sets the principal identifier.
     /// </summary>
     public string PrincipalId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the principal type losing access (for example user, group, organization).
+    /// Gets or sets the principal type (for example user, group, organization).
     /// </summary>
     public string PrincipalType { get; set; } = "user";
-
-    /// <summary>
-    /// Gets or sets an optional reason for auditability.
-    /// </summary>
-    public string? Reason { get; set; }
 }

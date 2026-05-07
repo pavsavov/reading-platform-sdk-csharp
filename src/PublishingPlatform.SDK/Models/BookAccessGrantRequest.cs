@@ -16,6 +16,11 @@ public sealed class BookAccessGrantRequest
     public string PrincipalId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the principal type receiving access (for example user, group, organization).
+    /// </summary>
+    public string PrincipalType { get; set; } = "user";
+
+    /// <summary>
     /// Gets or sets the access level to grant.
     /// </summary>
     public string AccessLevel { get; set; } = string.Empty;
