@@ -1,0 +1,12 @@
+{
+  "notFound": {
+    "statusCode": 404,
+    "message": "Resource was not found.",
+    "errorCode": "resource_not_found"
+  },
+  "validation": {
+    "statusCode": 400,
+    "message": "Request validation failed.",
+    "errorCode": "validation_error"
+  }
+}

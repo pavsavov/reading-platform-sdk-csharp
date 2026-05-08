@@ -1,0 +1,18 @@
+[
+  {
+    "operationId": "dist-0001",
+    "bookId": "book-0001",
+    "status": "completed",
+    "startedAt": "2026-05-08T12:02:00Z",
+    "completedAt": "2026-05-08T12:05:00Z",
+    "failureReason": null
+  },
+  {
+    "operationId": "dist-0002",
+    "bookId": "book-0002",
+    "status": "failed",
+    "startedAt": "2026-05-08T12:03:00Z",
+    "completedAt": "2026-05-08T12:04:00Z",
+    "failureReason": "Partner channel timeout"
+  }
+]

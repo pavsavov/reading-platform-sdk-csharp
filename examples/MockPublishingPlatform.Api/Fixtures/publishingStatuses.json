@@ -1,0 +1,16 @@
+[
+  {
+    "bookId": "book-0001",
+    "status": "published",
+    "scheduledAt": null,
+    "publishedAt": "2026-05-08T12:01:00Z",
+    "failureReason": null
+  },
+  {
+    "bookId": "book-0002",
+    "status": "failed",
+    "scheduledAt": null,
+    "publishedAt": null,
+    "failureReason": "Editorial validation failed"
+  }
+]

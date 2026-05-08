@@ -22,5 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PublishingPlatform.SDK\PublishingPlatform.SDK.csproj" />
+    <ProjectReference Include="..\..\examples\MockPublishingPlatform.Api\MockPublishingPlatform.Api.csproj" />
   </ItemGroup>
 </Project>
