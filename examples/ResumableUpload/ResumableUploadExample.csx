@@ -1,4 +1,7 @@
-//r "nuget: PublishingPlatform.SDK"
+#r "nuget: Microsoft.Extensions.Http, 9.0.1"
+#r "nuget: Microsoft.Extensions.Http.Resilience, 9.1.0"
+#r "nuget: Polly.Core, 8.4.2"
+#r "../../src/PublishingPlatform.SDK/bin/Debug/net10.0/PublishingPlatform.SDK.dll"
 
 using PublishingPlatform.SDK.Clients;
 using PublishingPlatform.SDK.Models;
