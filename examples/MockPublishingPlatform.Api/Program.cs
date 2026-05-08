@@ -2,6 +2,7 @@ using PublishingPlatform.SDK.Models;
 using PublishingPlatform.SDK.Models.Common;
 using MockPublishingPlatform.Api.Models;
 using MockPublishingPlatform.Api.Services;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton(FixtureLoader.Load(Path.Combine(builder.Environment.ContentRootPath, "Fixtures")));
@@ -12,6 +13,7 @@ var publishedAtTimestamp = DateTimeOffset.Parse("2026-05-08T12:01:00Z");
 var distributionStartTimestamp = DateTimeOffset.Parse("2026-05-08T12:02:00Z");
 var webhookCreatedTimestamp = DateTimeOffset.Parse("2026-05-08T12:03:00Z");
 var webhookUpdatedTimestamp = DateTimeOffset.Parse("2026-05-08T12:04:00Z");
+var uploadSessionExpiresAt = DateTimeOffset.Parse("2026-05-09T12:00:00Z");
 
 app.Use(async (context, next) =>
 {
@@ -144,7 +146,6 @@ app.MapPut("/books/{bookId}/content", async (string bookId, HttpRequest httpRequ
         format = Path.GetExtension(file.FileName).Trim('.').ToLowerInvariant();
     }
 
-    var now = DateTimeOffset.Parse("2026-05-08T12:00:00Z");
     var content = new BookContent
     {
         BookId = bookId,
@@ -176,6 +177,169 @@ app.MapGet("/books/{bookId}/content", (string bookId, HttpRequest httpRequest, M
     }
 
     return CreateNotFound(httpRequest, state);
+});
+
+app.MapPost("/books/{bookId}/content/uploads", (string bookId, StartResumableUploadRequest request, HttpRequest httpRequest, MockApiState state) =>
+{
+    if (!state.Books.Any(book => string.Equals(book.Id, bookId, StringComparison.OrdinalIgnoreCase)))
+    {
+        return CreateNotFound(httpRequest, state);
+    }
+
+    if (string.IsNullOrWhiteSpace(request.FileName) || request.TotalBytes <= 0)
+    {
+        return Results.BadRequest(ApiErrorResponse.FromFixture(state.ApiErrors["validation"], httpRequest.HttpContext.TraceIdentifier));
+    }
+
+    var idempotencyKey = IdempotencyHelper.Resolve(httpRequest);
+    if (IdempotencyHelper.TryReplay<UploadSessionInfo>(state, $"POST:/books/{bookId}/content/uploads:{idempotencyKey}", out var replayed))
+    {
+        return Results.Ok(replayed);
+    }
+
+    var sessionId = $"upl-{state.UploadSessions.Count + 1:D4}";
+    state.UploadSessions[sessionId] = new UploadSessionState
+    {
+        UploadSessionId = sessionId,
+        BookId = bookId,
+        FileName = request.FileName.Trim(),
+        ContentType = request.ContentType,
+        Format = request.Format,
+        UploadedBytes = 0,
+        TotalBytes = request.TotalBytes,
+        Status = "pending",
+    };
+
+    var info = new UploadSessionInfo
+    {
+        UploadSessionId = sessionId,
+        BookId = bookId,
+        UploadedBytes = 0,
+        TotalBytes = request.TotalBytes,
+        Status = "pending",
+        ExpiresAt = uploadSessionExpiresAt,
+    };
+
+    if (!string.IsNullOrWhiteSpace(idempotencyKey))
+    {
+        state.IdempotencyResponses[$"POST:/books/{bookId}/content/uploads:{idempotencyKey}"] = info;
+    }
+
+    return Results.Ok(info);
+});
+
+app.MapPut("/books/{bookId}/content/uploads/{uploadSessionId}/chunks", async (string bookId, string uploadSessionId, HttpRequest httpRequest, MockApiState state) =>
+{
+    if (!state.UploadSessions.TryGetValue(uploadSessionId, out var session)
+        || !string.Equals(session.BookId, bookId, StringComparison.OrdinalIgnoreCase))
+    {
+        return CreateNotFound(httpRequest, state);
+    }
+
+    if (!httpRequest.Headers.TryGetValue("Content-Range", out var rangeHeaderValues))
+    {
+        return Results.BadRequest(ApiErrorResponse.FromFixture(state.ApiErrors["validation"], httpRequest.HttpContext.TraceIdentifier));
+    }
+
+    var rangeHeader = rangeHeaderValues.ToString();
+    if (!TryParseContentRange(rangeHeader, out var rangeStart, out var rangeEnd, out var rangeTotal))
+    {
+        return Results.BadRequest(ApiErrorResponse.FromFixture(state.ApiErrors["validation"], httpRequest.HttpContext.TraceIdentifier));
+    }
+
+    if (rangeStart != session.UploadedBytes || rangeTotal != session.TotalBytes || rangeEnd < rangeStart)
+    {
+        return Results.BadRequest(ApiErrorResponse.FromFixture(state.ApiErrors["validation"], httpRequest.HttpContext.TraceIdentifier));
+    }
+
+    if (!httpRequest.ContentLength.HasValue || httpRequest.ContentLength.Value <= 0)
+    {
+        return Results.BadRequest(ApiErrorResponse.FromFixture(state.ApiErrors["validation"], httpRequest.HttpContext.TraceIdentifier));
+    }
+
+    var expectedLength = (rangeEnd - rangeStart) + 1;
+    var actualLength = httpRequest.ContentLength.Value;
+    if (actualLength != expectedLength)
+    {
+        return Results.BadRequest(ApiErrorResponse.FromFixture(state.ApiErrors["validation"], httpRequest.HttpContext.TraceIdentifier));
+    }
+
+    session.UploadedBytes += actualLength;
+    session.Status = session.UploadedBytes == session.TotalBytes ? "uploaded" : "in_progress";
+
+    var chunkResult = new UploadChunkResult
+    {
+        UploadSessionId = uploadSessionId,
+        AcceptedRangeStart = rangeStart,
+        AcceptedRangeEnd = rangeEnd,
+        UploadedBytes = session.UploadedBytes,
+        IsComplete = session.UploadedBytes == session.TotalBytes,
+    };
+
+    return Results.Ok(chunkResult);
+});
+
+app.MapGet("/books/{bookId}/content/uploads/{uploadSessionId}", (string bookId, string uploadSessionId, HttpRequest httpRequest, MockApiState state) =>
+{
+    if (!state.UploadSessions.TryGetValue(uploadSessionId, out var session)
+        || !string.Equals(session.BookId, bookId, StringComparison.OrdinalIgnoreCase))
+    {
+        return CreateNotFound(httpRequest, state);
+    }
+
+    var info = new UploadSessionInfo
+    {
+        UploadSessionId = session.UploadSessionId,
+        BookId = session.BookId,
+        UploadedBytes = session.UploadedBytes,
+        TotalBytes = session.TotalBytes,
+        Status = session.Status,
+        ExpiresAt = uploadSessionExpiresAt,
+    };
+
+    return Results.Ok(info);
+});
+
+app.MapPost("/books/{bookId}/content/uploads/{uploadSessionId}/complete", (string bookId, string uploadSessionId, CompleteResumableUploadRequest _, HttpRequest httpRequest, MockApiState state) =>
+{
+    if (!state.UploadSessions.TryGetValue(uploadSessionId, out var session)
+        || !string.Equals(session.BookId, bookId, StringComparison.OrdinalIgnoreCase))
+    {
+        return CreateNotFound(httpRequest, state);
+    }
+
+    var idempotencyKey = IdempotencyHelper.Resolve(httpRequest);
+    if (IdempotencyHelper.TryReplay<BookContent>(state, $"POST:/books/{bookId}/content/uploads/{uploadSessionId}/complete:{idempotencyKey}", out var replayed))
+    {
+        return Results.Ok(replayed);
+    }
+
+    if (session.UploadedBytes != session.TotalBytes)
+    {
+        return Results.BadRequest(ApiErrorResponse.FromFixture(state.ApiErrors["validation"], httpRequest.HttpContext.TraceIdentifier));
+    }
+
+    session.Status = "completed";
+    var format = string.IsNullOrWhiteSpace(session.Format)
+        ? Path.GetExtension(session.FileName).Trim('.').ToLowerInvariant()
+        : session.Format;
+
+    var content = new BookContent
+    {
+        BookId = bookId,
+        Format = string.IsNullOrWhiteSpace(format) ? "unknown" : format,
+        ContentUrl = new Uri($"https://mock.publisher-platform.dev/content/{Uri.EscapeDataString(bookId)}"),
+        LocalPath = $"/mock-storage/{bookId}/{session.FileName}",
+        StoredAt = storedAtTimestamp,
+    };
+
+    state.BookContents[bookId] = content;
+    if (!string.IsNullOrWhiteSpace(idempotencyKey))
+    {
+        state.IdempotencyResponses[$"POST:/books/{bookId}/content/uploads/{uploadSessionId}/complete:{idempotencyKey}"] = content;
+    }
+
+    return Results.Ok(content);
 });
 
 app.MapPost("/books/{bookId}/publishing/publish", (string bookId, PublishBookRequest _, HttpRequest httpRequest, MockApiState state) =>
@@ -358,4 +522,31 @@ app.Run();
 static IResult CreateNotFound(HttpRequest request, MockApiState state)
 {
     return Results.NotFound(ApiErrorResponse.FromFixture(state.ApiErrors["notFound"], request.HttpContext.TraceIdentifier));
+}
+
+static bool TryParseContentRange(string value, out long rangeStart, out long rangeEnd, out long totalBytes)
+{
+    rangeStart = 0;
+    rangeEnd = 0;
+    totalBytes = 0;
+    if (!value.StartsWith("bytes ", StringComparison.OrdinalIgnoreCase))
+    {
+        return false;
+    }
+
+    var pieces = value["bytes ".Length..].Split('/', StringSplitOptions.TrimEntries);
+    if (pieces.Length != 2)
+    {
+        return false;
+    }
+
+    var range = pieces[0].Split('-', StringSplitOptions.TrimEntries);
+    if (range.Length != 2)
+    {
+        return false;
+    }
+
+    return long.TryParse(range[0], NumberStyles.None, CultureInfo.InvariantCulture, out rangeStart)
+        && long.TryParse(range[1], NumberStyles.None, CultureInfo.InvariantCulture, out rangeEnd)
+        && long.TryParse(pieces[1], NumberStyles.None, CultureInfo.InvariantCulture, out totalBytes);
 }

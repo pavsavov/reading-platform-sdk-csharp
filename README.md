@@ -118,6 +118,7 @@ Runnable scripts are available in:
 - `examples/Pagination/PaginationExample.csx`
 - `examples/MockApiCoreFlowExample.csx`
 - `examples/MockPublishingPlatform.Api/README.md`
+- `examples/ResumableUpload/ResumableUploadExample.csx`
 
 ## Client modules: available properties and use cases
 
@@ -152,11 +153,16 @@ Available operations:
 
 - `GetAsync(...)`: retrieve content metadata for a book.
 - `UploadOrReplaceAsync(...)`: upload or replace book content and return the updated content metadata.
+- `StartResumableUploadAsync(...)`: create a resumable upload session.
+- `UploadChunkAsync(...)`: upload one chunk to an existing session.
+- `GetUploadSessionAsync(...)`: query resumable upload progress/state.
+- `CompleteResumableUploadAsync(...)`: finalize a resumable upload and materialize content metadata.
 
 Typical use cases:
 
 - Uploading source content for books.
 - Replacing or versioning stored content artifacts.
+- Resuming interrupted large uploads by session and byte range.
 
 ### `BookPublishing` (`IBookPublishingClient`)
 

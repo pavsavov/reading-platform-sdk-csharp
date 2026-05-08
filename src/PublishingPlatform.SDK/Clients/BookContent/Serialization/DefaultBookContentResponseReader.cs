@@ -17,4 +17,26 @@ internal sealed class DefaultBookContentResponseReader : IBookContentResponseRea
 
         return content;
     }
+
+    public async Task<UploadSessionInfo> ReadUploadSessionAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var session = await response.Content.ReadFromJsonAsync<UploadSessionInfo>(cancellationToken).ConfigureAwait(false);
+        if (session is null)
+        {
+            throw new BookValidationException("Upload session payload was empty.");
+        }
+
+        return session;
+    }
+
+    public async Task<UploadChunkResult> ReadUploadChunkResultAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var result = await response.Content.ReadFromJsonAsync<UploadChunkResult>(cancellationToken).ConfigureAwait(false);
+        if (result is null)
+        {
+            throw new BookValidationException("Upload chunk payload was empty.");
+        }
+
+        return result;
+    }
 }

@@ -42,4 +42,9 @@ public sealed class MockApiState
     /// Gets idempotency replay cache for mutating operations.
     /// </summary>
     public Dictionary<string, object> IdempotencyResponses { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets resumable upload sessions keyed by upload session id.
+    /// </summary>
+    public Dictionary<string, UploadSessionState> UploadSessions { get; } = new(StringComparer.OrdinalIgnoreCase);
 }

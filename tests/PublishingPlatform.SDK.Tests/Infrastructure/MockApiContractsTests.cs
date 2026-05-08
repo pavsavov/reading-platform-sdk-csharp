@@ -56,6 +56,28 @@ public sealed class MockApiContractsTests
         parsed.Should().Be(expected);
     }
 
+    [Fact]
+    public void UploadSessionState_CanTrackPartialAndCompleteProgress()
+    {
+        var session = new UploadSessionState
+        {
+            UploadSessionId = "upl-1",
+            BookId = "book-1",
+            FileName = "demo.epub",
+            TotalBytes = 10,
+            UploadedBytes = 0,
+            Status = "pending",
+        };
+
+        session.UploadedBytes += 4;
+        session.Status = "in_progress";
+        session.UploadedBytes += 6;
+        session.Status = session.UploadedBytes == session.TotalBytes ? "completed" : "in_progress";
+
+        session.UploadedBytes.Should().Be(10);
+        session.Status.Should().Be("completed");
+    }
+
     private static string ResolveFixturesPath()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

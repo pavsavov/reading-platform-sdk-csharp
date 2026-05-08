@@ -13,7 +13,7 @@ namespace PublishingPlatform.SDK.Tests.Infrastructure;
 [Trait("Category", "ContractConformance")]
 public sealed class ModuleContractConformanceTests
 {
-    private const string ExpectedContractShapeHash = "d7c7859c15bdeb7e028af604dc19fc70482885ef7fae05b1138a0e7de1141d7f";
+    private const string ExpectedContractShapeHash = "67cde6a14c0d25451f81f613d8baa13e2d42511506731c4303f0c9fd1298b2fb";
 
     private static readonly (string Name, Type InterfaceType)[] ExpectedPublishingPlatformClientProperties =
     {
@@ -67,7 +67,7 @@ public sealed class ModuleContractConformanceTests
             update ExpectedContractShapeHash to: {actualHash}
             """);
 
-        methods.Should().HaveCount(30);
+        methods.Should().HaveCount(34);
     }
 
     [Fact]
