@@ -233,6 +233,102 @@ paths:
         default:
           $ref: '#/components/responses/ErrorResponse'
 
+  /books/{bookId}/content/uploads:
+    post:
+      tags: [BookContent]
+      operationId: bookContent_startResumableUpload
+      summary: Start a resumable upload session
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/BookId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartResumableUploadRequest'
+      responses:
+        '200':
+          description: Upload session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSessionInfo'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+  /books/{bookId}/content/uploads/{uploadSessionId}:
+    get:
+      tags: [BookContent]
+      operationId: bookContent_getUploadSession
+      summary: Get resumable upload session state
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/BookId'
+        - $ref: '#/components/parameters/UploadSessionId'
+      responses:
+        '200':
+          description: Upload session state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSessionInfo'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+  /books/{bookId}/content/uploads/{uploadSessionId}/chunks:
+    put:
+      tags: [BookContent]
+      operationId: bookContent_uploadChunk
+      summary: Upload one resumable chunk
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/BookId'
+        - $ref: '#/components/parameters/UploadSessionId'
+        - $ref: '#/components/parameters/ContentRange'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              $ref: '#/components/schemas/UploadChunkRequest'
+      responses:
+        '200':
+          description: Chunk accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadChunkResult'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+  /books/{bookId}/content/uploads/{uploadSessionId}/complete:
+    post:
+      tags: [BookContent]
+      operationId: bookContent_completeResumableUpload
+      summary: Complete resumable upload session
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/BookId'
+        - $ref: '#/components/parameters/UploadSessionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteResumableUploadRequest'
+      responses:
+        '200':
+          description: Finalized book content metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookContent'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
   /books/{bookId}/publishing/publish:
     post:
       tags: [BookPublishing]
@@ -728,6 +824,13 @@ components:
       schema:
         type: string
         minLength: 1
+    UploadSessionId:
+      in: path
+      name: uploadSessionId
+      required: true
+      schema:
+        type: string
+        minLength: 1
     CorrelationId:
       in: header
       name: X-Correlation-Id
@@ -746,6 +849,13 @@ components:
       in: header
       name: If-Match
       required: false
+      schema:
+        type: string
+        minLength: 1
+    ContentRange:
+      in: header
+      name: Content-Range
+      required: true
       schema:
         type: string
         minLength: 1
@@ -914,6 +1024,93 @@ components:
           enum: [pdf, epub]
         idempotencyKey:
           type: [string, "null"]
+
+    StartResumableUploadRequest:
+      type: object
+      required: [fileName, totalBytes]
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+        contentType:
+          type: [string, "null"]
+        format:
+          type: [string, "null"]
+          enum: [pdf, epub, null]
+        totalBytes:
+          type: integer
+          format: int64
+          minimum: 1
+        idempotencyKey:
+          type: [string, "null"]
+
+    CompleteResumableUploadRequest:
+      type: object
+      properties:
+        finalChecksum:
+          type: [string, "null"]
+        idempotencyKey:
+          type: [string, "null"]
+
+    UploadChunkRequest:
+      type: object
+      required: [chunk, chunkStart, chunkEnd, totalBytes]
+      properties:
+        chunk:
+          type: string
+          format: binary
+        chunkStart:
+          type: integer
+          format: int64
+          minimum: 0
+        chunkEnd:
+          type: integer
+          format: int64
+          minimum: 0
+        totalBytes:
+          type: integer
+          format: int64
+          minimum: 1
+        chunkChecksum:
+          type: [string, "null"]
+
+    UploadSessionInfo:
+      type: object
+      required: [uploadSessionId, bookId, status, uploadedBytes, totalBytes]
+      properties:
+        uploadSessionId:
+          type: string
+        bookId:
+          type: string
+        status:
+          type: string
+        uploadedBytes:
+          type: integer
+          format: int64
+        totalBytes:
+          type: integer
+          format: int64
+        expiresAt:
+          type: [string, "null"]
+          format: date-time
+
+    UploadChunkResult:
+      type: object
+      required: [uploadSessionId, acceptedRangeStart, acceptedRangeEnd, uploadedBytes, isComplete]
+      properties:
+        uploadSessionId:
+          type: string
+        acceptedRangeStart:
+          type: integer
+          format: int64
+        acceptedRangeEnd:
+          type: integer
+          format: int64
+        uploadedBytes:
+          type: integer
+          format: int64
+        isComplete:
+          type: boolean
 
     PublishBookRequest:
       type: object

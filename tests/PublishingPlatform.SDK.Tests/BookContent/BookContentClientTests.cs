@@ -162,6 +162,158 @@ public sealed class BookContentClientTests
         ex.Which.Message.Should().Contain("Book content payload was empty");
     }
 
+    [Fact]
+    public async Task StartResumableUploadAsync_SendsPostWithIdempotencyHeader()
+    {
+        var transport = Substitute.For<ISharedHttpTransport>();
+        transport.SendAsync(
+                HttpMethod.Post,
+                "/books/book-3/content/uploads",
+                Arg.Any<HttpContent>(),
+                Arg.Any<IReadOnlyDictionary<string, string>>(),
+                "BookContent.StartResumableUpload",
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new UploadSessionInfo
+                {
+                    UploadSessionId = "upl-1",
+                    BookId = "book-3",
+                    Status = "pending",
+                    UploadedBytes = 0,
+                    TotalBytes = 10,
+                }),
+            }));
+
+        var sut = new BookContentClient(transport);
+        var result = await sut.StartResumableUploadAsync("book-3", new StartResumableUploadRequest
+        {
+            FileName = "demo.epub",
+            Format = "epub",
+            TotalBytes = 10,
+            IdempotencyKey = "start-1",
+        });
+
+        result.UploadSessionId.Should().Be("upl-1");
+        await transport.Received(1).SendAsync(
+            HttpMethod.Post,
+            "/books/book-3/content/uploads",
+            Arg.Any<HttpContent>(),
+            Arg.Is<IReadOnlyDictionary<string, string>>(headers => headers["Idempotency-Key"] == "start-1"),
+            "BookContent.StartResumableUpload",
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UploadChunkAsync_SendsPutWithContentRangeHeader()
+    {
+        var transport = Substitute.For<ISharedHttpTransport>();
+        transport.SendAsync(
+                HttpMethod.Put,
+                "/books/book-3/content/uploads/upl-1/chunks",
+                Arg.Any<HttpContent>(),
+                Arg.Any<IReadOnlyDictionary<string, string>>(),
+                "BookContent.UploadChunk",
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new UploadChunkResult
+                {
+                    UploadSessionId = "upl-1",
+                    AcceptedRangeStart = 0,
+                    AcceptedRangeEnd = 4,
+                    UploadedBytes = 5,
+                    IsComplete = false,
+                }),
+            }));
+
+        var sut = new BookContentClient(transport);
+        await using var chunk = new MemoryStream(Encoding.UTF8.GetBytes("chunk"));
+        var result = await sut.UploadChunkAsync("book-3", "upl-1", new UploadChunkRequest
+        {
+            Chunk = chunk,
+            ChunkStart = 0,
+            ChunkEnd = 4,
+            TotalBytes = 10,
+            ChunkChecksum = "sha256:abc",
+        });
+
+        result.UploadedBytes.Should().Be(5);
+        await transport.Received(1).SendAsync(
+            HttpMethod.Put,
+            "/books/book-3/content/uploads/upl-1/chunks",
+            Arg.Any<HttpContent>(),
+            Arg.Is<IReadOnlyDictionary<string, string>>(headers =>
+                headers["Content-Range"] == "bytes 0-4/10"
+                && headers["X-Chunk-Checksum"] == "sha256:abc"),
+            "BookContent.UploadChunk",
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetUploadSessionAsync_SendsGetToExpectedPath()
+    {
+        var transport = Substitute.For<ISharedHttpTransport>();
+        transport.SendAsync(
+                HttpMethod.Get,
+                "/books/book-3/content/uploads/upl-1",
+                null,
+                null,
+                "BookContent.GetUploadSession",
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new UploadSessionInfo
+                {
+                    UploadSessionId = "upl-1",
+                    BookId = "book-3",
+                    Status = "in_progress",
+                    UploadedBytes = 5,
+                    TotalBytes = 10,
+                }),
+            }));
+
+        var sut = new BookContentClient(transport);
+        var result = await sut.GetUploadSessionAsync("book-3", "upl-1");
+        result.Status.Should().Be("in_progress");
+    }
+
+    [Fact]
+    public async Task CompleteResumableUploadAsync_SendsPostWithIdempotencyHeader()
+    {
+        var transport = Substitute.For<ISharedHttpTransport>();
+        transport.SendAsync(
+                HttpMethod.Post,
+                "/books/book-3/content/uploads/upl-1/complete",
+                Arg.Any<HttpContent>(),
+                Arg.Any<IReadOnlyDictionary<string, string>>(),
+                "BookContent.CompleteResumableUpload",
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new Models.BookContent
+                {
+                    BookId = "book-3",
+                    Format = "epub",
+                }),
+            }));
+
+        var sut = new BookContentClient(transport);
+        var result = await sut.CompleteResumableUploadAsync("book-3", "upl-1", new CompleteResumableUploadRequest
+        {
+            IdempotencyKey = "complete-1",
+        });
+
+        result.BookId.Should().Be("book-3");
+        await transport.Received(1).SendAsync(
+            HttpMethod.Post,
+            "/books/book-3/content/uploads/upl-1/complete",
+            Arg.Any<HttpContent>(),
+            Arg.Is<IReadOnlyDictionary<string, string>>(headers => headers["Idempotency-Key"] == "complete-1"),
+            "BookContent.CompleteResumableUpload",
+            Arg.Any<CancellationToken>());
+    }
+
     private sealed class SingleResponseHandler : HttpMessageHandler
     {
         private readonly HttpResponseMessage _response;

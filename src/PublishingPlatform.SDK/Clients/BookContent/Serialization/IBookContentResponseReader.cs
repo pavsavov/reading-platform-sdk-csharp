@@ -8,4 +8,8 @@ using BookContentModel = PublishingPlatform.SDK.Models.BookContent;
 internal interface IBookContentResponseReader
 {
     Task<BookContentModel> ReadBookContentAsync(HttpResponseMessage response, CancellationToken cancellationToken);
+
+    Task<UploadSessionInfo> ReadUploadSessionAsync(HttpResponseMessage response, CancellationToken cancellationToken);
+
+    Task<UploadChunkResult> ReadUploadChunkResultAsync(HttpResponseMessage response, CancellationToken cancellationToken);
 }
