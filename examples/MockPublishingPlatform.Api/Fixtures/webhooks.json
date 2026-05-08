@@ -1,0 +1,20 @@
+[
+  {
+    "id": "wh-0001",
+    "endpointUrl": "https://hooks.example.com/publishing-platform",
+    "events": ["book.published", "book.distribution.completed"],
+    "isActive": true,
+    "signingKeyId": "signing-key-01",
+    "createdAt": "2026-05-08T12:03:00Z",
+    "updatedAt": null
+  },
+  {
+    "id": "wh-0002",
+    "endpointUrl": "https://hooks.example.com/archive",
+    "events": ["book.distribution.failed"],
+    "isActive": false,
+    "signingKeyId": null,
+    "createdAt": "2026-05-08T12:03:30Z",
+    "updatedAt": "2026-05-08T12:04:00Z"
+  }
+]

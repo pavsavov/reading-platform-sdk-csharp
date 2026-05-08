@@ -116,6 +116,8 @@ Runnable scripts are available in:
 - `examples/BookDistribution/BookDistributionExample.csx`
 - `examples/BookAnalytics/BookAnalyticsExample.csx`
 - `examples/Pagination/PaginationExample.csx`
+- `examples/MockApiCoreFlowExample.csx`
+- `examples/MockPublishingPlatform.Api/README.md`
 
 ## Client modules: available properties and use cases
 

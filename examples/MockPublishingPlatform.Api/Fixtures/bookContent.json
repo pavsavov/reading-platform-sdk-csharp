@@ -1,0 +1,9 @@
+[
+  {
+    "bookId": "book-0001",
+    "format": "epub",
+    "contentUrl": "https://mock.publisher-platform.dev/content/book-0001",
+    "localPath": "/mock-storage/book-0001/domain-driven-design.epub",
+    "storedAt": "2026-05-08T12:00:00Z"
+  }
+]

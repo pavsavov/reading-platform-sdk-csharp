@@ -1,0 +1,16 @@
+[
+  {
+    "id": "book-0001",
+    "title": "Domain-Driven Design",
+    "author": "Eric Evans",
+    "tags": ["architecture", "ddd"],
+    "concurrencyToken": "v1"
+  },
+  {
+    "id": "book-0002",
+    "title": "Clean Architecture",
+    "author": "Robert C. Martin",
+    "tags": ["architecture", "craft"],
+    "concurrencyToken": "v2"
+  }
+]
