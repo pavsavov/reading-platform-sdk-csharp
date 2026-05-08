@@ -10,7 +10,7 @@ namespace PublishingPlatform.SDK.Tests.Infrastructure;
 public sealed class OpenApiSpecificationContractsTests
 {
     private const string SpecRelativePath = @"docs\openapi-google-books-derived-sdk-contract.yaml";
-    private const string ExpectedSha256 = "4cba26b36e52961f018742a8ce52eb7e2032285e37591cda21c658b6cbb56e5e";
+    private const string ExpectedSha256 = "46f2aefcf0f53a2778616687411d72222dd473b2ea3841a100412c4d908cbfa4";
 
     private static readonly string[] ExpectedOperations =
     {
@@ -21,6 +21,7 @@ public sealed class OpenApiSpecificationContractsTests
         "GET /book-audit-logs",
         "GET /books",
         "GET /books/{bookId}",
+        "GET /books/{bookId}/content/uploads/{uploadSessionId}",
         "GET /books/{bookId}/access",
         "GET /books/{bookId}/access/check",
         "GET /books/{bookId}/content",
@@ -33,6 +34,8 @@ public sealed class OpenApiSpecificationContractsTests
         "POST /books",
         "POST /books/{bookId}/access",
         "POST /books/{bookId}/access/revoke",
+        "POST /books/{bookId}/content/uploads",
+        "POST /books/{bookId}/content/uploads/{uploadSessionId}/complete",
         "POST /books/{bookId}/distribution/{operationId}/retry",
         "POST /books/{bookId}/distribution/start",
         "POST /books/{bookId}/publishing/publish",
@@ -40,6 +43,7 @@ public sealed class OpenApiSpecificationContractsTests
         "POST /books/{bookId}/publishing/unpublish",
         "POST /webhooks",
         "PUT /books/{bookId}",
+        "PUT /books/{bookId}/content/uploads/{uploadSessionId}/chunks",
         "PUT /books/{bookId}/content",
     };
 
@@ -63,6 +67,10 @@ public sealed class OpenApiSpecificationContractsTests
         new(typeof(IBooksClient), nameof(IBooksClient.DeleteAsync), ["books_delete"]),
         new(typeof(IBookContentClient), nameof(IBookContentClient.GetAsync), ["bookContent_get"]),
         new(typeof(IBookContentClient), nameof(IBookContentClient.UploadOrReplaceAsync), ["bookContent_uploadOrReplace"]),
+        new(typeof(IBookContentClient), nameof(IBookContentClient.StartResumableUploadAsync), ["bookContent_startResumableUpload"]),
+        new(typeof(IBookContentClient), nameof(IBookContentClient.UploadChunkAsync), ["bookContent_uploadChunk"]),
+        new(typeof(IBookContentClient), nameof(IBookContentClient.GetUploadSessionAsync), ["bookContent_getUploadSession"]),
+        new(typeof(IBookContentClient), nameof(IBookContentClient.CompleteResumableUploadAsync), ["bookContent_completeResumableUpload"]),
         new(typeof(IBookPublishingClient), nameof(IBookPublishingClient.PublishAsync), ["bookPublishing_publish"]),
         new(typeof(IBookPublishingClient), nameof(IBookPublishingClient.UnpublishAsync), ["bookPublishing_unpublish"]),
         new(typeof(IBookPublishingClient), nameof(IBookPublishingClient.ScheduleAsync), ["bookPublishing_schedule"]),
@@ -105,7 +113,7 @@ public sealed class OpenApiSpecificationContractsTests
         var expectedOperations = ExpectedOperations.OrderBy(x => x, StringComparer.Ordinal).ToArray();
 
         operations.Should().Equal(expectedOperations);
-        operations.Should().HaveCount(27);
+        operations.Should().HaveCount(31);
     }
 
     [Fact]
