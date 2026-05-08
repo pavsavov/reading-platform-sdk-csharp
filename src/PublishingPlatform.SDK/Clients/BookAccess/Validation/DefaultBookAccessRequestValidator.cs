@@ -1,4 +1,5 @@
 using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Clients.Common.Validation;
 using PublishingPlatform.SDK.Models;
 
 namespace PublishingPlatform.SDK.Clients.BookAccess.Validation;
@@ -73,10 +74,7 @@ internal sealed class DefaultBookAccessRequestValidator : IBookAccessRequestVali
 
     private static void ValidateBookId(string bookId)
     {
-        if (string.IsNullOrWhiteSpace(bookId))
-        {
-            throw new BookValidationException("Book id is required.");
-        }
+        ValidationGuards.ValidateBookId(bookId);
     }
 
     private static void ValidatePrincipalId(string principalId)

@@ -1,3 +1,5 @@
+using PublishingPlatform.SDK.Infrastructure.Transport;
+
 namespace PublishingPlatform.SDK.Infrastructure.Diagnostics;
 
 /// <summary>
@@ -33,7 +35,7 @@ public sealed class DiagnosticsOptions
     /// <summary>
     /// Gets or sets the HTTP header name used to propagate correlation IDs.
     /// </summary>
-    public string CorrelationHeaderName { get; set; } = "X-Correlation-Id";
+    public string CorrelationHeaderName { get; set; } = TransportHeaderNames.CorrelationId;
 
     /// <summary>
     /// Gets or sets a value indicating whether the SDK generates correlation IDs for outgoing requests.

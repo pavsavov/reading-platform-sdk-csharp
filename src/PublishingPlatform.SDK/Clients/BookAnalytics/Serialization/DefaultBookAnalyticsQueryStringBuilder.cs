@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Text;
+using PublishingPlatform.SDK.Clients.BookAnalytics;
+using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 
 namespace PublishingPlatform.SDK.Clients.BookAnalytics.Serialization;
@@ -12,20 +14,19 @@ internal sealed class DefaultBookAnalyticsQueryStringBuilder : IBookAnalyticsQue
     /// <inheritdoc />
     public string BuildSummaryPath(GetBookAnalyticsRequest request)
     {
-        var builder = new StringBuilder("/book-analytics/summary?");
-        AppendQuery(builder, "bookId", request.BookId);
-        builder.Append('&');
-        AppendQuery(builder, "from", request.From!.Value.ToString("O", CultureInfo.InvariantCulture));
-        builder.Append('&');
-        AppendQuery(builder, "to", request.To!.Value.ToString("O", CultureInfo.InvariantCulture));
+        var builder = new StringBuilder(BookAnalyticsEndpoints.Summary);
+        QueryStringBuilderHelper.AppendRequired(builder, QueryParameterNames.BookId, request.BookId, isFirstParameter: true);
+        QueryStringBuilderHelper.AppendRequired(
+            builder,
+            QueryParameterNames.From,
+            request.From!.Value.ToString("O", CultureInfo.InvariantCulture),
+            isFirstParameter: false);
+        QueryStringBuilderHelper.AppendRequired(
+            builder,
+            QueryParameterNames.To,
+            request.To!.Value.ToString("O", CultureInfo.InvariantCulture),
+            isFirstParameter: false);
 
         return builder.ToString();
-    }
-
-    private static void AppendQuery(StringBuilder builder, string key, string value)
-    {
-        builder.Append(Uri.EscapeDataString(key));
-        builder.Append('=');
-        builder.Append(Uri.EscapeDataString(value));
     }
 }

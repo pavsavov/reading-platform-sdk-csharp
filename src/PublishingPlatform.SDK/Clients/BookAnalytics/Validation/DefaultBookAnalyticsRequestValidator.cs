@@ -1,4 +1,5 @@
 using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Clients.Common.Validation;
 using PublishingPlatform.SDK.Models;
 
 namespace PublishingPlatform.SDK.Clients.BookAnalytics.Validation;
@@ -11,10 +12,7 @@ internal sealed class DefaultBookAnalyticsRequestValidator : IBookAnalyticsReque
     /// <inheritdoc />
     public void ValidateGetSummary(GetBookAnalyticsRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.BookId))
-        {
-            throw new BookValidationException("Book id is required.");
-        }
+        ValidationGuards.ValidateBookId(request.BookId);
 
         if (!request.From.HasValue)
         {

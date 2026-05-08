@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 using PublishingPlatform.SDK.Models.Common;
 
@@ -13,24 +12,16 @@ internal sealed class DefaultWebhookResponseReader : IWebhookResponseReader
     /// <inheritdoc />
     public async Task<Webhook> ReadWebhookAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
-        var payload = await response.Content.ReadFromJsonAsync<Webhook>(cancellationToken).ConfigureAwait(false);
-        if (payload is null)
-        {
-            throw new BookValidationException("Webhook payload was empty.");
-        }
-
-        return payload;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<Webhook>(response, "Webhook payload was empty.", cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<PagedResult<Webhook>> ReadPagedWebhooksAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
-        var payload = await response.Content.ReadFromJsonAsync<PagedResult<Webhook>>(cancellationToken).ConfigureAwait(false);
-        if (payload is null)
-        {
-            throw new BookValidationException("Paged webhooks payload was empty.");
-        }
-
-        return payload;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<PagedResult<Webhook>>(response, "Paged webhooks payload was empty.", cancellationToken)
+            .ConfigureAwait(false);
     }
 }

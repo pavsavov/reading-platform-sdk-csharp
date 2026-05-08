@@ -62,6 +62,8 @@ The root client exposes resource-style modules such as:
 - `platformClient.BookPublishing`
 - `platformClient.Webhooks`
 
+Planned local upload/search workflow capabilities described in architecture docs are future-facing and are not currently exposed as separate public SDK modules.
+
 ### Direct builder initialization
 
 ```csharp

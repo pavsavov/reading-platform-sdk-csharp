@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: |
     Implemented API contract aligned to the current SDK implementation
-    on local branch feature/RPS-19.
+    for this repository.
 
     Architecture contract notes:
     - The SDK intentionally models deep book-lifecycle workflows before broader publishing domains.

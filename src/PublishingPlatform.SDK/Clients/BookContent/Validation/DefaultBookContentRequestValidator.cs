@@ -1,5 +1,6 @@
 namespace PublishingPlatform.SDK.Clients.BookContent.Validation;
 
+using PublishingPlatform.SDK.Clients.Common.Validation;
 using PublishingPlatform.SDK.Exceptions;
 using PublishingPlatform.SDK.Models;
 
@@ -13,10 +14,7 @@ internal sealed class DefaultBookContentRequestValidator : IBookContentRequestVa
 
     public void ValidateBookId(string bookId)
     {
-        if (string.IsNullOrWhiteSpace(bookId))
-        {
-            throw new BookValidationException("Book id is required.");
-        }
+        ValidationGuards.ValidateBookId(bookId);
     }
 
     public void ValidateUploadRequest(UploadBookContentRequest request)

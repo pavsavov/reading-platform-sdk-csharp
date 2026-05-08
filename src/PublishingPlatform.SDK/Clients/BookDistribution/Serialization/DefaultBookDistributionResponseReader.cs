@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 
 namespace PublishingPlatform.SDK.Clients.BookDistribution.Serialization;
@@ -12,24 +11,16 @@ internal sealed class DefaultBookDistributionResponseReader : IBookDistributionR
     /// <inheritdoc />
     public async Task<BookDistributionOperation> ReadOperationAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var operation = await response.Content.ReadFromJsonAsync<BookDistributionOperation>(ct).ConfigureAwait(false);
-        if (operation is null)
-        {
-            throw new BookValidationException("Book distribution operation payload was empty.");
-        }
-
-        return operation;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<BookDistributionOperation>(response, "Book distribution operation payload was empty.", ct)
+            .ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<BookDistributionListResult> ReadListAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var list = await response.Content.ReadFromJsonAsync<BookDistributionListResult>(ct).ConfigureAwait(false);
-        if (list is null)
-        {
-            throw new BookValidationException("Book distribution list payload was empty.");
-        }
-
-        return list;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<BookDistributionListResult>(response, "Book distribution list payload was empty.", ct)
+            .ConfigureAwait(false);
     }
 }

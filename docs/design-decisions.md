@@ -6,7 +6,7 @@ This document records the major SDK design decisions that guide current implemen
 
 Status: Accepted.
 
-The SDK focuses on the book lifecycle before expanding into broader publishing domains. The core modules are books, content, publishing, distribution, access, analytics, audit logs, assets, and webhooks.
+The SDK focuses on the book lifecycle before expanding into broader publishing domains. The core modules are books, content, publishing, distribution, access, analytics, audit logs, and webhooks. Planned local upload/search capabilities are tracked separately and are not yet exposed as public SDK modules.
 
 This keeps the SDK useful for real partner workflows instead of spreading effort across shallow generic API wrappers.
 

@@ -10,7 +10,7 @@ namespace PublishingPlatform.SDK.Tests.Infrastructure;
 public sealed class OpenApiSpecificationContractsTests
 {
     private const string SpecRelativePath = @"docs\openapi-google-books-derived-sdk-contract.yaml";
-    private const string ExpectedSha256 = "5f0e1359264f6e8a6758777c42f64bd41e3ad0385ea2c63be5799f891d4d9f0f";
+    private const string ExpectedSha256 = "46f2aefcf0f53a2778616687411d72222dd473b2ea3841a100412c4d908cbfa4";
 
     private static readonly string[] ExpectedOperations =
     {

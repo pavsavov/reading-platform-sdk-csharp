@@ -1,3 +1,4 @@
+using PublishingPlatform.SDK.Clients.Common.Requests;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 
 namespace PublishingPlatform.SDK.Clients.Books.Requests;
@@ -6,15 +7,7 @@ internal sealed class DefaultBookRequestHeadersFactory : IBookRequestHeadersFact
 {
     public IReadOnlyDictionary<string, string>? CreateIdempotencyHeaders(string? idempotencyKey)
     {
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            return null;
-        }
-
-        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [TransportHeaderNames.IdempotencyKey] = idempotencyKey,
-        };
+        return RequestHeadersFactoryHelper.CreateIdempotencyHeaders(idempotencyKey);
     }
 
     public IReadOnlyDictionary<string, string>? CreateConcurrencyHeaders(string? concurrencyToken)
@@ -26,7 +19,7 @@ internal sealed class DefaultBookRequestHeadersFactory : IBookRequestHeadersFact
 
         return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["If-Match"] = concurrencyToken,
+            [TransportHeaderNames.IfMatch] = concurrencyToken,
         };
     }
 }

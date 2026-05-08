@@ -19,4 +19,9 @@ internal static class TransportHeaderNames
     /// Idempotency header used for retry-safe mutating operations.
     /// </summary>
     internal const string IdempotencyKey = "Idempotency-Key";
+
+    /// <summary>
+    /// Concurrency header used for optimistic updates.
+    /// </summary>
+    internal const string IfMatch = "If-Match";
 }
