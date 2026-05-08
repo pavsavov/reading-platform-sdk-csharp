@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using PublishingPlatform.SDK.Clients.Webhooks;
 using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 
@@ -13,21 +14,21 @@ internal sealed class DefaultWebhookQueryStringBuilder : IWebhookQueryStringBuil
     /// <inheritdoc />
     public string BuildListPath(ListWebhooksRequest request)
     {
-        var builder = new StringBuilder("/webhooks");
+        var builder = new StringBuilder(WebhooksEndpoints.Collection);
         QueryStringBuilderHelper.AppendRequired(
             builder,
-            "pageSize",
+            QueryParameterNames.PageSize,
             request.PageSize.ToString(CultureInfo.InvariantCulture),
             isFirstParameter: true);
 
         _ = QueryStringBuilderHelper.AppendOptional(
             builder,
-            "continuationToken",
+            QueryParameterNames.ContinuationToken,
             request.ContinuationToken,
             isFirstParameter: false);
         _ = QueryStringBuilderHelper.AppendOptional(
             builder,
-            "event",
+            QueryParameterNames.Event,
             request.Event,
             isFirstParameter: false);
 
@@ -35,8 +36,8 @@ internal sealed class DefaultWebhookQueryStringBuilder : IWebhookQueryStringBuil
         {
             QueryStringBuilderHelper.AppendRequired(
                 builder,
-                "isActive",
-                request.IsActive.Value ? "true" : "false",
+                QueryParameterNames.IsActive,
+                request.IsActive.Value ? QueryParameterValues.BooleanTrue : QueryParameterValues.BooleanFalse,
                 isFirstParameter: false);
         }
 

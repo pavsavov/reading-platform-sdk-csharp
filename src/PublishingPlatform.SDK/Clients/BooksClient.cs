@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients.Common.Pagination;
+using PublishingPlatform.SDK.Clients.Books;
 using PublishingPlatform.SDK.Clients.Books.Requests;
 using PublishingPlatform.SDK.Clients.Books.Serialization;
 using PublishingPlatform.SDK.Clients.Books.Validation;
@@ -61,7 +62,7 @@ public sealed class BooksClient : IBooksClient
 
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(request.IdempotencyKey);
         var content = JsonContent.Create(request);
-        using var response = await _transport.SendAsync(HttpMethod.Post, "/books", content, headers, CreateOperationName, ct).ConfigureAwait(false);
+        using var response = await _transport.SendAsync(HttpMethod.Post, BooksEndpoints.Collection, content, headers, CreateOperationName, ct).ConfigureAwait(false);
 
         return await _responseReader.ReadBookAsync(response, ct).ConfigureAwait(false);
     }
@@ -70,7 +71,7 @@ public sealed class BooksClient : IBooksClient
     public async Task<Book> GetByIdAsync(string bookId, CancellationToken ct = default)
     {
         _validator.ValidateBookId(bookId);
-        using var response = await _transport.SendAsync(HttpMethod.Get, $"/books/{Uri.EscapeDataString(bookId)}", null, null, GetByIdOperationName, ct).ConfigureAwait(false);
+        using var response = await _transport.SendAsync(HttpMethod.Get, BooksEndpoints.ById(bookId), null, null, GetByIdOperationName, ct).ConfigureAwait(false);
         return await _responseReader.ReadBookAsync(response, ct).ConfigureAwait(false);
     }
 
@@ -112,7 +113,7 @@ public sealed class BooksClient : IBooksClient
 
         var headers = _requestHeadersFactory.CreateConcurrencyHeaders(request.ConcurrencyToken);
         var content = JsonContent.Create(request);
-        using var response = await _transport.SendAsync(HttpMethod.Put, $"/books/{Uri.EscapeDataString(bookId)}", content, headers, UpdateMetadataOperationName, ct).ConfigureAwait(false);
+        using var response = await _transport.SendAsync(HttpMethod.Put, BooksEndpoints.ById(bookId), content, headers, UpdateMetadataOperationName, ct).ConfigureAwait(false);
         return await _responseReader.ReadBookAsync(response, ct).ConfigureAwait(false);
     }
 
@@ -125,7 +126,7 @@ public sealed class BooksClient : IBooksClient
 
         var headers = _requestHeadersFactory.CreateConcurrencyHeaders(request.ConcurrencyToken);
         var content = JsonContent.Create(request);
-        using var response = await _transport.SendAsync(HttpMethod.Patch, $"/books/{Uri.EscapeDataString(bookId)}", content, headers, PatchMetadataOperationName, ct).ConfigureAwait(false);
+        using var response = await _transport.SendAsync(HttpMethod.Patch, BooksEndpoints.ById(bookId), content, headers, PatchMetadataOperationName, ct).ConfigureAwait(false);
         return await _responseReader.ReadBookAsync(response, ct).ConfigureAwait(false);
     }
 
@@ -133,7 +134,7 @@ public sealed class BooksClient : IBooksClient
     public async Task DeleteAsync(string bookId, CancellationToken ct = default)
     {
         _validator.ValidateBookId(bookId);
-        using var _ = await _transport.SendAsync(HttpMethod.Delete, $"/books/{Uri.EscapeDataString(bookId)}", null, null, DeleteOperationName, ct).ConfigureAwait(false);
+        using var _ = await _transport.SendAsync(HttpMethod.Delete, BooksEndpoints.ById(bookId), null, null, DeleteOperationName, ct).ConfigureAwait(false);
     }
 
     private static ListBooksRequest CloneListRequest(ListBooksRequest request)

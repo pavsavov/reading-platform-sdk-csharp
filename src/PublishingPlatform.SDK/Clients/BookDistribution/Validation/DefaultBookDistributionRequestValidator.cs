@@ -1,4 +1,5 @@
 using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Clients.Common.Validation;
 using PublishingPlatform.SDK.Models;
 
 namespace PublishingPlatform.SDK.Clients.BookDistribution.Validation;
@@ -11,10 +12,7 @@ internal sealed class DefaultBookDistributionRequestValidator : IBookDistributio
     /// <inheritdoc />
     public void ValidateBookId(string bookId)
     {
-        if (string.IsNullOrWhiteSpace(bookId))
-        {
-            throw new BookValidationException("Book id is required.");
-        }
+        ValidationGuards.ValidateBookId(bookId);
     }
 
     /// <inheritdoc />

@@ -43,4 +43,65 @@ public static class IdempotencyHelper
         replayed = default!;
         return false;
     }
+
+    /// <summary>
+    /// Attempts to replay a previous mutating result using a method/path/idempotency tuple.
+    /// </summary>
+    /// <typeparam name="T">Expected replay payload type.</typeparam>
+    /// <param name="state">Runtime state.</param>
+    /// <param name="method">HTTP method name.</param>
+    /// <param name="path">Request path key.</param>
+    /// <param name="idempotencyKey">Resolved idempotency key.</param>
+    /// <param name="replayed">The replayed value when found.</param>
+    /// <returns>True when replay is available; otherwise false.</returns>
+    public static bool TryReplay<T>(
+        MockApiState state,
+        string method,
+        string path,
+        string? idempotencyKey,
+        out T replayed)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            replayed = default!;
+            return false;
+        }
+
+        return TryReplay(state, BuildOperationKey(method, path, idempotencyKey), out replayed);
+    }
+
+    /// <summary>
+    /// Stores a replay payload for a method/path/idempotency tuple when an idempotency key is present.
+    /// </summary>
+    /// <param name="state">Runtime state.</param>
+    /// <param name="method">HTTP method name.</param>
+    /// <param name="path">Request path key.</param>
+    /// <param name="idempotencyKey">Resolved idempotency key.</param>
+    /// <param name="payload">Payload to replay.</param>
+    public static void StoreReplay(
+        MockApiState state,
+        string method,
+        string path,
+        string? idempotencyKey,
+        object payload)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            return;
+        }
+
+        state.IdempotencyResponses[BuildOperationKey(method, path, idempotencyKey)] = payload;
+    }
+
+    /// <summary>
+    /// Builds a stable operation key from HTTP method, request path key, and idempotency key.
+    /// </summary>
+    /// <param name="method">HTTP method name.</param>
+    /// <param name="path">Request path key.</param>
+    /// <param name="idempotencyKey">Idempotency key value.</param>
+    /// <returns>The stable replay key.</returns>
+    public static string BuildOperationKey(string method, string path, string idempotencyKey)
+    {
+        return $"{method}:{path}:{idempotencyKey}";
+    }
 }

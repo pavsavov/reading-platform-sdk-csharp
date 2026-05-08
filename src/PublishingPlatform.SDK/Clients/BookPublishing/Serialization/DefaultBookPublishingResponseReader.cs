@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 
 namespace PublishingPlatform.SDK.Clients.BookPublishing.Serialization;
@@ -12,12 +11,8 @@ internal sealed class DefaultBookPublishingResponseReader : IBookPublishingRespo
     /// <inheritdoc />
     public async Task<BookPublishingStatus> ReadStatusAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var status = await response.Content.ReadFromJsonAsync<BookPublishingStatus>(ct).ConfigureAwait(false);
-        if (status is null)
-        {
-            throw new BookValidationException("Book publishing status payload was empty.");
-        }
-
-        return status;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<BookPublishingStatus>(response, "Book publishing status payload was empty.", ct)
+            .ConfigureAwait(false);
     }
 }

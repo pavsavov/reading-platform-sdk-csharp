@@ -1,3 +1,4 @@
+using PublishingPlatform.SDK.Clients.Common.Requests;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 
 namespace PublishingPlatform.SDK.Clients.BookPublishing.Requests;
@@ -10,14 +11,6 @@ internal sealed class DefaultBookPublishingRequestHeadersFactory : IBookPublishi
     /// <inheritdoc />
     public IReadOnlyDictionary<string, string>? CreateIdempotencyHeaders(string? idempotencyKey)
     {
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            return null;
-        }
-
-        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [TransportHeaderNames.IdempotencyKey] = idempotencyKey,
-        };
+        return RequestHeadersFactoryHelper.CreateIdempotencyHeaders(idempotencyKey);
     }
 }

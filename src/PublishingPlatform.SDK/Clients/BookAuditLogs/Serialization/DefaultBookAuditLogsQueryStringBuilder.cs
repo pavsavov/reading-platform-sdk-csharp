@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using PublishingPlatform.SDK.Clients.BookAuditLogs;
 using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 
@@ -13,13 +14,13 @@ internal sealed class DefaultBookAuditLogsQueryStringBuilder : IBookAuditLogsQue
     /// <inheritdoc />
     public string BuildListPath(ListBookAuditLogsRequest request)
     {
-        var builder = new StringBuilder("/book-audit-logs");
-        QueryStringBuilderHelper.AppendRequired(builder, "page", request.Page.ToString(CultureInfo.InvariantCulture), isFirstParameter: true);
-        QueryStringBuilderHelper.AppendRequired(builder, "pageSize", request.PageSize.ToString(CultureInfo.InvariantCulture), isFirstParameter: false);
+        var builder = new StringBuilder(BookAuditLogsEndpoints.Collection);
+        QueryStringBuilderHelper.AppendRequired(builder, QueryParameterNames.Page, request.Page.ToString(CultureInfo.InvariantCulture), isFirstParameter: true);
+        QueryStringBuilderHelper.AppendRequired(builder, QueryParameterNames.PageSize, request.PageSize.ToString(CultureInfo.InvariantCulture), isFirstParameter: false);
 
-        _ = QueryStringBuilderHelper.AppendOptional(builder, "continuationToken", request.ContinuationToken, isFirstParameter: false);
-        _ = QueryStringBuilderHelper.AppendOptional(builder, "bookId", request.BookId, isFirstParameter: false);
-        _ = QueryStringBuilderHelper.AppendOptional(builder, "action", request.Action, isFirstParameter: false);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, QueryParameterNames.ContinuationToken, request.ContinuationToken, isFirstParameter: false);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, QueryParameterNames.BookId, request.BookId, isFirstParameter: false);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, QueryParameterNames.Action, request.Action, isFirstParameter: false);
 
         return builder.ToString();
     }

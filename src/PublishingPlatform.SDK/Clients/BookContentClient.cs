@@ -1,4 +1,5 @@
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients.BookContent;
 using PublishingPlatform.SDK.Clients.BookContent.Requests;
 using PublishingPlatform.SDK.Clients.BookContent.Serialization;
 using PublishingPlatform.SDK.Clients.BookContent.Validation;
@@ -54,7 +55,7 @@ public sealed class BookContentClient : IBookContentClient
 
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
-            $"/books/{Uri.EscapeDataString(bookId)}/content",
+            BookContentEndpoints.ByBookId(bookId),
             null,
             null,
             GetOperationName,
@@ -74,7 +75,7 @@ public sealed class BookContentClient : IBookContentClient
         using var content = _multipartFormFactory.Create(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Put,
-            $"/books/{Uri.EscapeDataString(bookId)}/content",
+            BookContentEndpoints.ByBookId(bookId),
             content,
             headers,
             UploadOrReplaceOperationName,

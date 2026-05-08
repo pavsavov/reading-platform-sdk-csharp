@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 using PublishingPlatform.SDK.Models.Common;
 
@@ -13,48 +12,32 @@ internal sealed class DefaultBookAccessResponseReader : IBookAccessResponseReade
     /// <inheritdoc />
     public async Task<BookAccessGrantResult> ReadGrantResultAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var payload = await response.Content.ReadFromJsonAsync<BookAccessGrantResult>(ct).ConfigureAwait(false);
-        if (payload is null)
-        {
-            throw new BookValidationException("Book access grant payload was empty.");
-        }
-
-        return payload;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<BookAccessGrantResult>(response, "Book access grant payload was empty.", ct)
+            .ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<BookAccessRevokeResult> ReadRevokeResultAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var payload = await response.Content.ReadFromJsonAsync<BookAccessRevokeResult>(ct).ConfigureAwait(false);
-        if (payload is null)
-        {
-            throw new BookValidationException("Book access revoke payload was empty.");
-        }
-
-        return payload;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<BookAccessRevokeResult>(response, "Book access revoke payload was empty.", ct)
+            .ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<BookAccessStatus> ReadStatusAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var payload = await response.Content.ReadFromJsonAsync<BookAccessStatus>(ct).ConfigureAwait(false);
-        if (payload is null)
-        {
-            throw new BookValidationException("Book access status payload was empty.");
-        }
-
-        return payload;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<BookAccessStatus>(response, "Book access status payload was empty.", ct)
+            .ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<PagedResult<BookAccessGrant>> ReadPagedGrantResultAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var payload = await response.Content.ReadFromJsonAsync<PagedResult<BookAccessGrant>>(ct).ConfigureAwait(false);
-        if (payload is null)
-        {
-            throw new BookValidationException("Paged book access payload was empty.");
-        }
-
-        return payload;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<PagedResult<BookAccessGrant>>(response, "Paged book access payload was empty.", ct)
+            .ConfigureAwait(false);
     }
 }

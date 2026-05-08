@@ -1,4 +1,5 @@
 using System.Text;
+using PublishingPlatform.SDK.Clients.BookAccess;
 using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 
@@ -12,11 +13,9 @@ internal sealed class DefaultBookAccessQueryStringBuilder : IBookAccessQueryStri
     /// <inheritdoc />
     public string BuildCheckPath(BookAccessCheckRequest request)
     {
-        var builder = new StringBuilder($"/books/{Uri.EscapeDataString(request.BookId)}/access/check?");
-        builder.Append("principalId=");
-        builder.Append(Uri.EscapeDataString(request.PrincipalId));
-        builder.Append("&principalType=");
-        builder.Append(Uri.EscapeDataString(request.PrincipalType));
+        var builder = new StringBuilder(BookAccessEndpoints.Check(request.BookId));
+        QueryStringBuilderHelper.AppendRequired(builder, QueryParameterNames.PrincipalId, request.PrincipalId, isFirstParameter: true);
+        QueryStringBuilderHelper.AppendRequired(builder, QueryParameterNames.PrincipalType, request.PrincipalType, isFirstParameter: false);
         return builder.ToString();
     }
 
@@ -24,16 +23,16 @@ internal sealed class DefaultBookAccessQueryStringBuilder : IBookAccessQueryStri
     public string BuildListPath(ListBookAccessRequest request)
     {
         var path = string.IsNullOrWhiteSpace(request.BookId)
-            ? "/book-access"
-            : $"/books/{Uri.EscapeDataString(request.BookId)}/access";
+            ? BookAccessEndpoints.Collection
+            : BookAccessEndpoints.ForBook(request.BookId);
 
         var builder = new StringBuilder(path);
-        QueryStringBuilderHelper.AppendRequired(builder, "pageSize", request.PageSize.ToString(System.Globalization.CultureInfo.InvariantCulture), isFirstParameter: true);
+        QueryStringBuilderHelper.AppendRequired(builder, QueryParameterNames.PageSize, request.PageSize.ToString(System.Globalization.CultureInfo.InvariantCulture), isFirstParameter: true);
 
-        _ = QueryStringBuilderHelper.AppendOptional(builder, "continuationToken", request.ContinuationToken, isFirstParameter: false);
-        _ = QueryStringBuilderHelper.AppendOptional(builder, "principalId", request.PrincipalId, isFirstParameter: false);
-        _ = QueryStringBuilderHelper.AppendOptional(builder, "principalType", request.PrincipalType, isFirstParameter: false);
-        _ = QueryStringBuilderHelper.AppendOptional(builder, "accessLevel", request.AccessLevel, isFirstParameter: false);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, QueryParameterNames.ContinuationToken, request.ContinuationToken, isFirstParameter: false);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, QueryParameterNames.PrincipalId, request.PrincipalId, isFirstParameter: false);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, QueryParameterNames.PrincipalType, request.PrincipalType, isFirstParameter: false);
+        _ = QueryStringBuilderHelper.AppendOptional(builder, QueryParameterNames.AccessLevel, request.AccessLevel, isFirstParameter: false);
 
         return builder.ToString();
     }

@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients.BookAccess;
 using PublishingPlatform.SDK.Clients.Common.Pagination;
 using PublishingPlatform.SDK.Clients.BookAccess.Serialization;
 using PublishingPlatform.SDK.Clients.BookAccess.Validation;
@@ -55,7 +56,7 @@ public sealed class BookAccessClient : IBookAccessClient
         _validator.ValidateGrant(request);
 
         var content = JsonContent.Create(request);
-        var relativePath = $"/books/{Uri.EscapeDataString(request.BookId)}/access";
+        var relativePath = BookAccessEndpoints.ForBook(request.BookId);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
             relativePath,
@@ -76,7 +77,7 @@ public sealed class BookAccessClient : IBookAccessClient
         _validator.ValidateRevoke(request);
 
         var content = JsonContent.Create(request);
-        var relativePath = $"/books/{Uri.EscapeDataString(request.BookId)}/access/revoke";
+        var relativePath = BookAccessEndpoints.Revoke(request.BookId);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
             relativePath,

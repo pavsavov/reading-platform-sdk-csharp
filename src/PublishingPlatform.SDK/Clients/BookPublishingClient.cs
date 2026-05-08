@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients.BookPublishing;
 using PublishingPlatform.SDK.Clients.BookPublishing.Requests;
 using PublishingPlatform.SDK.Clients.BookPublishing.Serialization;
 using PublishingPlatform.SDK.Clients.BookPublishing.Validation;
@@ -56,7 +57,7 @@ public sealed class BookPublishingClient : IBookPublishingClient
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
-            $"/books/{Uri.EscapeDataString(bookId)}/publishing/publish",
+            BookPublishingEndpoints.Publish(bookId),
             content,
             headers,
             PublishOperationName,
@@ -73,7 +74,7 @@ public sealed class BookPublishingClient : IBookPublishingClient
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(idempotencyKey);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
-            $"/books/{Uri.EscapeDataString(bookId)}/publishing/unpublish",
+            BookPublishingEndpoints.Unpublish(bookId),
             null,
             headers,
             UnpublishOperationName,
@@ -93,7 +94,7 @@ public sealed class BookPublishingClient : IBookPublishingClient
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
-            $"/books/{Uri.EscapeDataString(bookId)}/publishing/schedule",
+            BookPublishingEndpoints.Schedule(bookId),
             content,
             headers,
             ScheduleOperationName,
@@ -109,7 +110,7 @@ public sealed class BookPublishingClient : IBookPublishingClient
 
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
-            $"/books/{Uri.EscapeDataString(bookId)}/publishing/status",
+            BookPublishingEndpoints.Status(bookId),
             null,
             null,
             GetStatusOperationName,

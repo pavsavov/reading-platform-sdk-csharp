@@ -1,4 +1,8 @@
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients.BookAccess;
+using PublishingPlatform.SDK.Clients.BookAnalytics;
+using PublishingPlatform.SDK.Clients.BookAuditLogs;
+using PublishingPlatform.SDK.Clients.Books;
 using PublishingPlatform.SDK.Exceptions;
 
 namespace PublishingPlatform.SDK.Infrastructure.Errors;
@@ -62,10 +66,10 @@ internal sealed class DefaultPublishingPlatformErrorMapper : IPublishingPlatform
     private static bool StartsWithBookCentricPath(string relativePath)
     {
         var path = GetPathWithoutQuery(relativePath);
-        return path.StartsWith("/books", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("/book-access", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("/book-analytics", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("/book-audit-logs", StringComparison.OrdinalIgnoreCase);
+        return path.StartsWith(BooksEndpoints.Collection, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(BookAccessEndpoints.Collection, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(BookAnalyticsEndpoints.Collection, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(BookAuditLogsEndpoints.Collection, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool StartsWithOperationPrefix(string? operationName, string prefix)

@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using PublishingPlatform.SDK.Exceptions;
+using PublishingPlatform.SDK.Clients.Common.Serialization;
 using PublishingPlatform.SDK.Models;
 
 namespace PublishingPlatform.SDK.Clients.BookAnalytics.Serialization;
@@ -12,12 +11,8 @@ internal sealed class DefaultBookAnalyticsResponseReader : IBookAnalyticsRespons
     /// <inheritdoc />
     public async Task<AnalyticsSummary> ReadSummaryAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var payload = await response.Content.ReadFromJsonAsync<AnalyticsSummary>(ct).ConfigureAwait(false);
-        if (payload is null)
-        {
-            throw new BookValidationException("Book analytics summary payload was empty.");
-        }
-
-        return payload;
+        return await ResponseReaderHelper
+            .ReadRequiredAsync<AnalyticsSummary>(response, "Book analytics summary payload was empty.", ct)
+            .ConfigureAwait(false);
     }
 }

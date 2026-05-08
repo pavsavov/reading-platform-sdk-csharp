@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
+using PublishingPlatform.SDK.Clients.BookDistribution;
 using PublishingPlatform.SDK.Clients.BookDistribution.Requests;
 using PublishingPlatform.SDK.Clients.BookDistribution.Serialization;
 using PublishingPlatform.SDK.Clients.BookDistribution.Validation;
@@ -56,7 +57,7 @@ public sealed class BookDistributionClient : IBookDistributionClient
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
-            $"/books/{Uri.EscapeDataString(bookId)}/distribution/start",
+            BookDistributionEndpoints.Start(bookId),
             content,
             headers,
             StartOperationName,
@@ -73,7 +74,7 @@ public sealed class BookDistributionClient : IBookDistributionClient
 
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
-            $"/books/{Uri.EscapeDataString(bookId)}/distribution/{Uri.EscapeDataString(operationId)}/status",
+            BookDistributionEndpoints.Status(bookId, operationId),
             null,
             null,
             GetStatusOperationName,
@@ -91,7 +92,7 @@ public sealed class BookDistributionClient : IBookDistributionClient
         var headers = _requestHeadersFactory.CreateIdempotencyHeaders(idempotencyKey);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
-            $"/books/{Uri.EscapeDataString(bookId)}/distribution/{Uri.EscapeDataString(operationId)}/retry",
+            BookDistributionEndpoints.Retry(bookId, operationId),
             null,
             headers,
             RetryOperationName,
@@ -107,7 +108,7 @@ public sealed class BookDistributionClient : IBookDistributionClient
 
         using var response = await _transport.SendAsync(
             HttpMethod.Get,
-            $"/books/{Uri.EscapeDataString(bookId)}/distribution",
+            BookDistributionEndpoints.List(bookId),
             null,
             null,
             ListOperationName,

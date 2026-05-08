@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Clients.Common.Pagination;
+using PublishingPlatform.SDK.Clients.Webhooks;
 using PublishingPlatform.SDK.Clients.Webhooks.Requests;
 using PublishingPlatform.SDK.Clients.Webhooks.Serialization;
 using PublishingPlatform.SDK.Clients.Webhooks.Validation;
@@ -64,7 +65,7 @@ public sealed class WebhooksClient : IWebhooksClient
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Post,
-            "/webhooks",
+            WebhooksEndpoints.Collection,
             content,
             headers,
             RegisterOperationName,
@@ -84,7 +85,7 @@ public sealed class WebhooksClient : IWebhooksClient
         var content = JsonContent.Create(request);
         using var response = await _transport.SendAsync(
             HttpMethod.Patch,
-            $"/webhooks/{Uri.EscapeDataString(request.WebhookId)}",
+            WebhooksEndpoints.ById(request.WebhookId),
             content,
             null,
             UpdateOperationName,
@@ -102,7 +103,7 @@ public sealed class WebhooksClient : IWebhooksClient
 
         using var response = await _transport.SendAsync(
             HttpMethod.Delete,
-            $"/webhooks/{Uri.EscapeDataString(webhookId)}",
+            WebhooksEndpoints.ById(webhookId),
             null,
             null,
             DeleteOperationName,
