@@ -91,6 +91,30 @@ public sealed class PublishingPlatformRequestOptionsExtensionsTests
     }
 
     [Fact]
+    public async Task ScheduleAsync_ForwardsIdempotencyKey_FromRequestOptions()
+    {
+        var idempotencyKey = new Faker().Random.Guid().ToString("N");
+        var client = Substitute.For<IBookPublishingClient>();
+        client.ScheduleAsync(
+                "book-1",
+                Arg.Any<ScheduleBookPublishingRequest>(),
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new BookPublishingStatus { BookId = "book-1", Status = "scheduled" }));
+
+        await client.ScheduleAsync(
+            "book-1",
+            new ScheduleBookPublishingRequest { ScheduledAt = DateTimeOffset.UtcNow.AddHours(1) },
+            new PublishingPlatformRequestOptions { IdempotencyKey = idempotencyKey });
+
+        await client.Received(1).ScheduleAsync(
+            "book-1",
+            Arg.Any<ScheduleBookPublishingRequest>(),
+            idempotencyKey,
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task UnpublishAsync_WithNullRequestOptions_ForwardsNullIdempotencyKey()
     {
         var client = Substitute.For<IBookPublishingClient>();

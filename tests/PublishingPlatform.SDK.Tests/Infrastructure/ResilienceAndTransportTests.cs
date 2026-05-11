@@ -134,6 +134,30 @@ public sealed class ResilienceAndTransportTests
     }
 
     [Fact]
+    public async Task SendAsync_UsesGeneratedCorrelationId_WhenRequestScopedCorrelationIsWhitespace()
+    {
+        var correlationProvider = new FixedCorrelationIdProvider("generated-correlation");
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            correlationProvider,
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions(),
+            });
+
+        using (RequestScopedCorrelationContext.Push("   "))
+        {
+            await transport.SendAsync(HttpMethod.Get, "/books", null, null, "Books.GetById", CancellationToken.None, "Books");
+        }
+
+        handler.LastRequest!.Headers.TryGetValues(SharedHttpTransport.CorrelationHeaderName, out var values).Should().BeTrue();
+        values.Should().ContainSingle().Which.Should().Be("generated-correlation");
+        correlationProvider.CallCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task SendAsync_UsesCustomCorrelationHeaderName()
     {
         const string headerName = "X-Trace-Id";
