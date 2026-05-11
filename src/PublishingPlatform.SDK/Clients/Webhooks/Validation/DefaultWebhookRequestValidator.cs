@@ -65,12 +65,9 @@ internal sealed class DefaultWebhookRequestValidator : IWebhookRequestValidator
             throw new BookValidationException("At least one webhook event is required.");
         }
 
-        foreach (var webhookEvent in events)
+        if (events.Any(string.IsNullOrWhiteSpace))
         {
-            if (string.IsNullOrWhiteSpace(webhookEvent))
-            {
-                throw new BookValidationException("Webhook events cannot contain empty values.");
-            }
+            throw new BookValidationException("Webhook events cannot contain empty values.");
         }
     }
 }

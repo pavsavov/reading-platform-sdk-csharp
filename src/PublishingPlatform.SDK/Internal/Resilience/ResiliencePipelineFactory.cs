@@ -66,7 +66,12 @@ internal static class ResiliencePipelineFactory
     {
         if (args.Outcome.Exception is HttpRequestException or TimeoutRejectedException or BrokenCircuitException)
         {
-            return IsMethodAllowed(args.Context, retryNonIdempotentMethods);
+            if (!DefaultPublishingPlatformResiliencePipeline.TryGetHttpMethod(args.Context, out var exceptionMethod))
+            {
+                return false;
+            }
+
+            return IsMethodAllowed(exceptionMethod, retryNonIdempotentMethods, args.Context);
         }
 
         if (args.Outcome.Result is null)
@@ -85,16 +90,6 @@ internal static class ResiliencePipelineFactory
         }
 
         return IsTransientStatusCode(args.Outcome.Result.StatusCode, IsNonIdempotentRetryCandidate(method));
-    }
-
-    private static bool IsMethodAllowed(ResilienceContext context, bool retryNonIdempotentMethods)
-    {
-        if (!DefaultPublishingPlatformResiliencePipeline.TryGetHttpMethod(context, out var method))
-        {
-            return false;
-        }
-
-        return IsMethodAllowed(method, retryNonIdempotentMethods, context);
     }
 
     private static bool IsMethodAllowed(HttpMethod method, bool retryNonIdempotentMethods)

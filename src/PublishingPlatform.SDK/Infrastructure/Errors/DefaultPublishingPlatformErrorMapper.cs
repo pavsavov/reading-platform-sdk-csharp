@@ -4,6 +4,7 @@ using PublishingPlatform.SDK.Clients.BookAnalytics;
 using PublishingPlatform.SDK.Clients.BookAuditLogs;
 using PublishingPlatform.SDK.Clients.Books;
 using PublishingPlatform.SDK.Exceptions;
+using System.Linq;
 
 namespace PublishingPlatform.SDK.Infrastructure.Errors;
 
@@ -47,12 +48,9 @@ internal sealed class DefaultPublishingPlatformErrorMapper : IPublishingPlatform
             return false;
         }
 
-        foreach (var prefix in BookCentricOperationPrefixes)
+        if (BookCentricOperationPrefixes.Any(prefix => StartsWithOperationPrefix(context.OperationName, prefix)))
         {
-            if (StartsWithOperationPrefix(context.OperationName, prefix))
-            {
-                return true;
-            }
+            return true;
         }
 
         if (StartsWithBookCentricPath(context.RelativePath))
@@ -108,17 +106,23 @@ internal sealed class DefaultPublishingPlatformErrorMapper : IPublishingPlatform
         }
 
         var query = relativePath[(queryStart + 1)..];
-        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var separatorIndex = pair.IndexOf('=', StringComparison.Ordinal);
-            var candidateKey = separatorIndex < 0 ? pair : pair[..separatorIndex];
-            if (!Uri.UnescapeDataString(candidateKey).Equals(key, StringComparison.OrdinalIgnoreCase))
+        var value = query.Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(pair =>
             {
-                continue;
-            }
-
-            var value = separatorIndex < 0 ? string.Empty : pair[(separatorIndex + 1)..];
-            return Uri.UnescapeDataString(value);
+                var separatorIndex = pair.IndexOf('=', StringComparison.Ordinal);
+                var candidateKey = separatorIndex < 0 ? pair : pair[..separatorIndex];
+                return new
+                {
+                    CandidateKey = Uri.UnescapeDataString(candidateKey),
+                    Value = separatorIndex < 0 ? string.Empty : pair[(separatorIndex + 1)..],
+                };
+            })
+            .Where(candidate => candidate.CandidateKey.Equals(key, StringComparison.OrdinalIgnoreCase))
+            .Select(candidate => Uri.UnescapeDataString(candidate.Value))
+            .FirstOrDefault();
+        if (value is not null)
+        {
+            return value;
         }
 
         return null;

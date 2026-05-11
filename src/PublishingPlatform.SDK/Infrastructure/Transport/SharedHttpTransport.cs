@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PublishingPlatform.SDK.Abstractions;
@@ -65,6 +67,7 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
     {
     }
 
+    [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Internal composition constructor wires transport collaborators explicitly for deterministic test seams and DI-free bootstrap paths.")]
     internal SharedHttpTransport(
         HttpClient httpClient,
         IPublishingPlatformResiliencePipeline resiliencePipeline,
@@ -204,12 +207,13 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
     {
         if (headers is not null)
         {
-            foreach (var header in headers)
+            var correlationHeader = headers
+                .Where(header => string.Equals(header.Key, options.CorrelationHeaderName, StringComparison.OrdinalIgnoreCase))
+                .Select(header => header.Value)
+                .FirstOrDefault();
+            if (correlationHeader is not null)
             {
-                if (string.Equals(header.Key, options.CorrelationHeaderName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return header.Value;
-                }
+                return correlationHeader;
             }
         }
 
@@ -235,16 +239,9 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
             return false;
         }
 
-        foreach (var header in headers)
-        {
-            if (string.Equals(header.Key, headerName, StringComparison.OrdinalIgnoreCase)
-                && !string.IsNullOrWhiteSpace(header.Value))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return headers.Any(header =>
+            string.Equals(header.Key, headerName, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(header.Value));
     }
 
     private static bool IsReplayableContent(HttpContent? content)
