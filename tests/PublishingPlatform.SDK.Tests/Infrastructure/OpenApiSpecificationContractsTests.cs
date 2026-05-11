@@ -7,7 +7,7 @@ using PublishingPlatform.SDK.Models.Common;
 
 namespace PublishingPlatform.SDK.Tests.Infrastructure;
 
-public sealed class OpenApiSpecificationContractsTests
+public sealed partial class OpenApiSpecificationContractsTests
 {
     private const string SpecRelativePath = @"docs\openapi-google-books-derived-sdk-contract.yaml";
     private const string ExpectedSha256 = "46f2aefcf0f53a2778616687411d72222dd473b2ea3841a100412c4d908cbfa4";
@@ -245,12 +245,12 @@ public sealed class OpenApiSpecificationContractsTests
 
     private static OpenApiOperationContract[] ParseOperationContracts(string specText)
     {
-        var pathPattern = new Regex(@"^\s{2}(/[^:]+):\s*$", RegexOptions.Compiled);
-        var operationPattern = new Regex(@"^\s{4}(get|post|put|patch|delete):\s*$", RegexOptions.Compiled);
-        var operationIdPattern = new Regex(@"^\s{6}operationId:\s*(\S+)\s*$", RegexOptions.Compiled);
-        var sectionPattern = new Regex(@"^\s{6}([A-Za-z][A-Za-z0-9_-]*):\s*$", RegexOptions.Compiled);
-        var statusCodePattern = new Regex(@"^\s{8}'(\d{3})':\s*$", RegexOptions.Compiled);
-        var schemaRefPattern = new Regex(@"^\s{14,}\$ref:\s*'#/components/schemas/([^']+)'", RegexOptions.Compiled);
+        var pathPattern = PathPattern();
+        var operationPattern = OperationPattern();
+        var operationIdPattern = OperationIdPattern();
+        var sectionPattern = SectionPattern();
+        var statusCodePattern = StatusCodePattern();
+        var schemaRefPattern = SchemaRefPattern();
 
         var lines = specText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         var currentPath = string.Empty;
@@ -356,7 +356,7 @@ public sealed class OpenApiSpecificationContractsTests
                 continue;
             }
 
-            if (inResponses && currentStatusCode is not null && currentStatusCode.StartsWith("2", StringComparison.Ordinal))
+            if (inResponses && currentStatusCode is not null && currentStatusCode.StartsWith('2'))
             {
                 currentOperation.SuccessResponseSchemas.Add(schemaName);
             }
@@ -492,4 +492,22 @@ public sealed class OpenApiSpecificationContractsTests
         Type InterfaceType,
         string MethodName,
         string[] OperationIds);
+
+    [GeneratedRegex(@"^\s{2}(/[^:]+):\s*$")]
+    private static partial Regex PathPattern();
+
+    [GeneratedRegex(@"^\s{4}(get|post|put|patch|delete):\s*$")]
+    private static partial Regex OperationPattern();
+
+    [GeneratedRegex(@"^\s{6}operationId:\s*(\S+)\s*$")]
+    private static partial Regex OperationIdPattern();
+
+    [GeneratedRegex(@"^\s{6}([A-Za-z][A-Za-z0-9_-]*):\s*$")]
+    private static partial Regex SectionPattern();
+
+    [GeneratedRegex(@"^\s{8}'(\d{3})':\s*$")]
+    private static partial Regex StatusCodePattern();
+
+    [GeneratedRegex(@"^\s{14,}\$ref:\s*'#/components/schemas/([^']+)'")]
+    private static partial Regex SchemaRefPattern();
 }

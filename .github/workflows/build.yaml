@@ -59,7 +59,7 @@ jobs:
         run: |
           dotnet test .\PublishingPlatform.SDK.sln `
             --configuration Release `
-            --no-build `
+            --no-restore `
             /p:CollectCoverage=true `
             /p:CoverletOutputFormat=opencover `
             /p:CoverletOutput=./TestResults/Coverage/
@@ -97,7 +97,7 @@ jobs:
         shell: powershell
         run: |
           ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"pavsavov_reading-platform-sdk-csharp" /o:"pavsavov" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.cs.opencover.reportsPaths="**/TestResults/Coverage/coverage.opencover.xml"
-          dotnet build .\PublishingPlatform.SDK.sln --configuration Release --no-restore
+          dotnet build .\PublishingPlatform.SDK.sln --configuration Release --no-restore /p:CollectCoverage=true
           dotnet test .\PublishingPlatform.SDK.sln `
             --configuration Release `
             --no-build `

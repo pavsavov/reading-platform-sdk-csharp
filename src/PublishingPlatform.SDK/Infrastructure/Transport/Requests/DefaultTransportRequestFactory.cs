@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Linq;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 
 namespace PublishingPlatform.SDK.Infrastructure.Transport.Requests;
@@ -30,13 +31,11 @@ internal sealed class DefaultTransportRequestFactory : ITransportRequestFactory
 
         if (headers is not null)
         {
-            foreach (var header in headers)
-            {
-                if (!request.Headers.TryAddWithoutValidation(header.Key, header.Value))
-                {
-                    request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
-                }
-            }
+            _ = headers
+                .Where(static header => !string.IsNullOrWhiteSpace(header.Key))
+                .All(header =>
+                    request.Headers.TryAddWithoutValidation(header.Key, header.Value)
+                    || (request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value) ?? false));
         }
 
         if (!string.IsNullOrWhiteSpace(correlationId) && !request.Headers.Contains(correlationHeaderName))

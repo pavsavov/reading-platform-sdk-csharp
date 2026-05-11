@@ -25,6 +25,34 @@ public sealed class PublishingPlatformClientBuilder
         return new PublishingPlatformClientBuilder(options);
     }
 
+    /// <summary>
+    /// Creates a builder from a minimal base URL and API key configuration.
+    /// </summary>
+    /// <param name="baseUrl">The Publishing Platform API base URL.</param>
+    /// <param name="apiKey">The API key used by the SDK transport.</param>
+    /// <returns>A configured <see cref="PublishingPlatformClientBuilder"/> instance.</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="baseUrl"/> or <paramref name="apiKey"/> is empty.
+    /// </exception>
+    public static PublishingPlatformClientBuilder Create(string baseUrl, string apiKey)
+    {
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            throw new ArgumentException("Base URL must not be empty.", nameof(baseUrl));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key must not be empty.", nameof(apiKey));
+        }
+
+        return Create(new PublishingPlatformClientOptions
+        {
+            BaseUrl = baseUrl,
+            ApiKey = apiKey,
+        });
+    }
+
     public PublishingPlatformClientBuilder WithResiliencePipeline(IPublishingPlatformResiliencePipeline pipeline)
     {
         _customPipeline = pipeline;

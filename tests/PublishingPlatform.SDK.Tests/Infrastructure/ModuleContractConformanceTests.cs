@@ -14,6 +14,24 @@ namespace PublishingPlatform.SDK.Tests.Infrastructure;
 public sealed class ModuleContractConformanceTests
 {
     private const string ExpectedContractShapeHash = "67cde6a14c0d25451f81f613d8baa13e2d42511506731c4303f0c9fd1298b2fb";
+    private static readonly string[] BookPublishedEvents = ["book.published"];
+    private static readonly string[] KindleChannels = ["kindle"];
+    private static readonly Book[] SingleBookItems = [new Book { Id = "book-1", Title = "Title", Author = "Author" }];
+    private static readonly BookDistributionOperation[] SingleDistributionOperations =
+        [new BookDistributionOperation { OperationId = "op-1", BookId = "book-1", Status = "running" }];
+    private static readonly AuditLog[] SingleAuditLogItems =
+        [new AuditLog { Id = "audit-1", Action = "book.updated", Timestamp = DateTimeOffset.UtcNow }];
+    private static readonly Webhook[] SingleWebhookItems =
+    [
+        new Webhook
+        {
+            Id = "wh-1",
+            EndpointUrl = "https://hooks.example.test/books",
+            Events = BookPublishedEvents,
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow,
+        },
+    ];
 
     private static readonly (string Name, Type InterfaceType)[] ExpectedPublishingPlatformClientProperties =
     {
@@ -79,8 +97,7 @@ public sealed class ModuleContractConformanceTests
             parameters.Should().NotBeEmpty();
 
             var cancellationToken = parameters[^1];
-            cancellationToken.ParameterType.Should().Be(
-                typeof(CancellationToken),
+            cancellationToken.ParameterType.Should().Be<CancellationToken>(
                 $"{method.DeclaringType!.Name}.{method.Name} should take a trailing cancellation token");
             cancellationToken.IsOptional.Should().BeTrue();
             cancellationToken.HasDefaultValue.Should().BeTrue();
@@ -105,7 +122,7 @@ public sealed class ModuleContractConformanceTests
             var idempotencyKeyParameter = method
                 .GetParameters()[^2];
 
-            idempotencyKeyParameter.ParameterType.Should().Be(typeof(string));
+            idempotencyKeyParameter.ParameterType.Should().Be<string>();
             idempotencyKeyParameter.IsOptional.Should().BeTrue();
             idempotencyKeyParameter.HasDefaultValue.Should().BeTrue();
             idempotencyKeyParameter.DefaultValue.Should().BeNull();
@@ -255,7 +272,7 @@ public sealed class ModuleContractConformanceTests
             "Books.Create" or "Books.GetById" or "Books.UpdateMetadata" or "Books.PatchMetadata"
                 => JsonResponse(new Book { Id = "book-1", Title = "Title", Author = "Author" }),
             "Books.List"
-                => JsonResponse(new PagedResult<Book> { Items = new[] { new Book { Id = "book-1", Title = "Title", Author = "Author" } } }),
+                => JsonResponse(new PagedResult<Book> { Items = SingleBookItems }),
             "Books.Delete"
                 => new HttpResponseMessage(HttpStatusCode.NoContent),
             "BookContent.Get" or "BookContent.UploadOrReplace"
@@ -267,7 +284,7 @@ public sealed class ModuleContractConformanceTests
             "BookDistribution.List"
                 => JsonResponse(new BookDistributionListResult
                 {
-                    Operations = new[] { new BookDistributionOperation { OperationId = "op-1", BookId = "book-1", Status = "running" } },
+                    Operations = SingleDistributionOperations,
                 }),
             "BookAccess.Grant"
                 => JsonResponse(new BookAccessGrantResult
@@ -319,14 +336,14 @@ public sealed class ModuleContractConformanceTests
             "BookAuditLogs.List"
                 => JsonResponse(new PagedResult<AuditLog>
                 {
-                    Items = new[] { new AuditLog { Id = "audit-1", Action = "book.updated", Timestamp = DateTimeOffset.UtcNow } },
+                    Items = SingleAuditLogItems,
                 }),
             "Webhooks.Register" or "Webhooks.Update"
                 => JsonResponse(new Webhook
                 {
                     Id = "wh-1",
                     EndpointUrl = "https://hooks.example.test/books",
-                    Events = new[] { "book.published" },
+                    Events = BookPublishedEvents,
                     IsActive = true,
                     CreatedAt = DateTimeOffset.UtcNow,
                 }),
@@ -335,17 +352,7 @@ public sealed class ModuleContractConformanceTests
             "Webhooks.List"
                 => JsonResponse(new PagedResult<Webhook>
                 {
-                    Items = new[]
-                    {
-                        new Webhook
-                        {
-                            Id = "wh-1",
-                            EndpointUrl = "https://hooks.example.test/books",
-                            Events = new[] { "book.published" },
-                            IsActive = true,
-                            CreatedAt = DateTimeOffset.UtcNow,
-                        },
-                    },
+                    Items = SingleWebhookItems,
                 }),
             _ => throw new InvalidOperationException($"No synthetic success response configured for operation '{operationName ?? "<null>"}'."),
         };
@@ -427,7 +434,7 @@ public sealed class ModuleContractConformanceTests
             new(
                 "IBookDistributionClient.StartAsync",
                 "BookDistribution.Start",
-                async transport => await new BookDistributionClient(transport).StartAsync("book-1", new StartBookDistributionRequest { Channels = new[] { "kindle" } }, "idem-1")),
+                async transport => await new BookDistributionClient(transport).StartAsync("book-1", new StartBookDistributionRequest { Channels = KindleChannels }, "idem-1")),
             new(
                 "IBookDistributionClient.GetStatusAsync",
                 "BookDistribution.GetStatus",
@@ -499,7 +506,7 @@ public sealed class ModuleContractConformanceTests
                 async transport => await new WebhooksClient(transport).RegisterAsync(new RegisterWebhookRequest
                 {
                     EndpointUrl = "https://hooks.example.test/books",
-                    Events = new[] { "book.published" },
+                    Events = BookPublishedEvents,
                 }, "idem-1")),
             new(
                 "IWebhooksClient.UpdateAsync",
@@ -508,7 +515,7 @@ public sealed class ModuleContractConformanceTests
                 {
                     WebhookId = "wh-1",
                     EndpointUrl = "https://hooks.example.test/books",
-                    Events = new[] { "book.published" },
+                    Events = BookPublishedEvents,
                     IsActive = true,
                 })),
             new(

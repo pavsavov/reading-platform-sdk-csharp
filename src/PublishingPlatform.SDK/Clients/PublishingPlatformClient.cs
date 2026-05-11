@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using PublishingPlatform.SDK.Abstractions;
 using PublishingPlatform.SDK.Infrastructure.Transport;
 
@@ -19,6 +20,7 @@ public sealed class PublishingPlatformClient : IPublishingPlatformClient
     /// <param name="bookAnalytics">The book analytics module client.</param>
     /// <param name="bookAuditLogs">The book audit logs module client.</param>
     /// <param name="webhooks">The webhooks module client.</param>
+    [SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Public API constructor composes fixed module dependencies for explicit root client wiring.")]
     public PublishingPlatformClient(
         IBooksClient books,
         IBookContentClient bookContent,
