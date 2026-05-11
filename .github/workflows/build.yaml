@@ -57,11 +57,18 @@ jobs:
         if: ${{ env.SONAR_TOKEN == '' }}
         shell: powershell
         run: |
+          $coverageDir = "${{ github.workspace }}\tests\PublishingPlatform.SDK.Tests\TestResults\Coverage"
           dotnet test .\PublishingPlatform.SDK.sln `
             --configuration Release `
             /p:CollectCoverage=true `
             /p:CoverletOutputFormat=opencover `
-            /p:CoverletOutput=./TestResults/Coverage/
+            "/p:CoverletOutput=$coverageDir\"
+
+          $reportPath = "$coverageDir\coverage.opencover.xml"
+          if (!(Test-Path $reportPath)) {
+            Write-Error "Coverage report not found at expected path: $reportPath"
+            exit 1
+          }
 
       - name: Dependency vulnerability audit
         shell: powershell
@@ -95,12 +102,17 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' }}
         shell: powershell
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"pavsavov_reading-platform-sdk-csharp" /o:"pavsavov" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.cs.opencover.reportsPaths="**/TestResults/Coverage/coverage.opencover.xml"
+          $coverageDir = "${{ github.workspace }}\tests\PublishingPlatform.SDK.Tests\TestResults\Coverage"
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin `
+            /k:"pavsavov_reading-platform-sdk-csharp" `
+            /o:"pavsavov" `
+            /d:sonar.token="$env:SONAR_TOKEN" `
+            /d:sonar.cs.opencover.reportsPaths="$coverageDir\coverage.opencover.xml"
           dotnet build .\PublishingPlatform.SDK.sln --configuration Release --no-restore
           dotnet test .\PublishingPlatform.SDK.sln `
             --configuration Release `
             --no-build `
             /p:CollectCoverage=true `
             /p:CoverletOutputFormat=opencover `
-            /p:CoverletOutput=./TestResults/Coverage/
+            "/p:CoverletOutput=$coverageDir\"
           ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
