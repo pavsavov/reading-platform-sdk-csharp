@@ -31,13 +31,11 @@ internal sealed class DefaultTransportRequestFactory : ITransportRequestFactory
 
         if (headers is not null)
         {
-            foreach (var header in headers.Where(static header => !string.IsNullOrWhiteSpace(header.Key)))
-            {
-                if (!request.Headers.TryAddWithoutValidation(header.Key, header.Value))
-                {
-                    request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
-                }
-            }
+            _ = headers
+                .Where(static header => !string.IsNullOrWhiteSpace(header.Key))
+                .All(header =>
+                    request.Headers.TryAddWithoutValidation(header.Key, header.Value)
+                    || (request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value) ?? false));
         }
 
         if (!string.IsNullOrWhiteSpace(correlationId) && !request.Headers.Contains(correlationHeaderName))
