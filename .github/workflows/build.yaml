@@ -104,12 +104,18 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' }}
         shell: powershell
         run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"pavsavov_reading-platform-sdk-csharp" /o:"pavsavov" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.cs.opencover.reportsPaths="**/TestResults/Coverage/coverage.opencover.xml"
+          $coveragePath = "tests/PublishingPlatform.SDK.Tests/TestResults/Coverage/coverage.opencover.xml"
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"pavsavov_reading-platform-sdk-csharp" /o:"pavsavov" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.cs.opencover.reportsPaths="$coveragePath" /d:sonar.verbose=true
           dotnet build .\PublishingPlatform.SDK.sln --configuration Release --no-restore
           dotnet test .\PublishingPlatform.SDK.sln `
             --configuration Release `
             --no-build `
             /p:CollectCoverage=true `
             /p:CoverletOutputFormat=opencover `
-            /p:CoverletOutput=./TestResults/Coverage/
+            /p:CoverletOutput=tests/PublishingPlatform.SDK.Tests/TestResults/Coverage/
+          if (!(Test-Path $coveragePath)) {
+            Write-Error "Coverage report not found at expected path: $coveragePath"
+            exit 1
+          }
+          Get-Item $coveragePath | Select-Object FullName, Length, LastWriteTime | Format-List
           ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
