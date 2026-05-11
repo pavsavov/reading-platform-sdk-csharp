@@ -104,8 +104,8 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' }}
         shell: powershell
         run: |
-          $coverageDir = "TestResults/Coverage"
-          $coveragePath = "tests/PublishingPlatform.SDK.Tests/$coverageDir/coverage.opencover.xml"
+          $coveragePath = "tests/PublishingPlatform.SDK.Tests/TestResults/Coverage/coverage.opencover.xml"
+          Remove-Item -Recurse -Force .\tests\PublishingPlatform.SDK.Tests\TestResults\Coverage -ErrorAction SilentlyContinue
           ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"pavsavov_reading-platform-sdk-csharp" /o:"pavsavov" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.cs.opencover.reportsPaths="$coveragePath" /d:sonar.verbose=true
           dotnet build .\PublishingPlatform.SDK.sln --configuration Release --no-restore
           dotnet test .\PublishingPlatform.SDK.sln `
@@ -113,17 +113,10 @@ jobs:
             --no-build `
             /p:CollectCoverage=true `
             /p:CoverletOutputFormat=opencover `
-            /p:CoverletOutput=$coverageDir/
-          $resolvedCoveragePath = Get-ChildItem -Path .\tests\PublishingPlatform.SDK.Tests -Recurse -Filter coverage.opencover.xml -File |
-            Where-Object { $_.FullName -like "*TestResults*Coverage*coverage.opencover.xml" } |
-            Select-Object -First 1
-          if ($null -eq $resolvedCoveragePath) {
-            Write-Error "Coverage report not found under tests/PublishingPlatform.SDK.Tests/TestResults/Coverage."
-            exit 1
-          }
+            /p:CoverletOutput=tests/PublishingPlatform.SDK.Tests/TestResults/Coverage/
           if (!(Test-Path $coveragePath)) {
             Write-Error "Coverage report not found at expected path: $coveragePath"
-            Write-Host "Discovered coverage report: $($resolvedCoveragePath.FullName)"
+            Get-ChildItem -Path . -Recurse -Filter coverage.opencover.xml -File | Select-Object -ExpandProperty FullName
             exit 1
           }
           Get-Item $coveragePath | Select-Object FullName, Length, LastWriteTime | Format-List
