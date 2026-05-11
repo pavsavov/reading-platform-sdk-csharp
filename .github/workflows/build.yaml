@@ -53,6 +53,10 @@ jobs:
         shell: powershell
         run: dotnet build .\PublishingPlatform.SDK.sln --configuration Release --no-restore
 
+      - name: Build mock API example
+        shell: powershell
+        run: dotnet build .\examples\MockPublishingPlatform.Api\MockPublishingPlatform.Api.csproj --configuration Release --no-restore
+
       - name: Test with coverage
         if: ${{ env.SONAR_TOKEN == '' }}
         shell: powershell
@@ -67,6 +71,10 @@ jobs:
       - name: Dependency vulnerability audit
         shell: powershell
         run: dotnet list .\PublishingPlatform.SDK.sln package --vulnerable --include-transitive
+
+      - name: Pack SDK
+        shell: powershell
+        run: dotnet pack .\src\PublishingPlatform.SDK\PublishingPlatform.SDK.csproj --configuration Release --no-build --output .\artifacts\ci-pack
 
       - name: Cache SonarQube packages
         if: ${{ env.SONAR_TOKEN != '' }}

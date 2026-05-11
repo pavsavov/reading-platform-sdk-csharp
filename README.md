@@ -53,6 +53,14 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
 }).Build();
 ```
 
+For quick setup in scripts or small tools, use the shorthand overload:
+
+```csharp
+var client = PublishingPlatformClientBuilder
+    .Create("https://api.books.example", "your-api-key")
+    .Build();
+```
+
 ## Initialization examples
 
 The root client exposes resource-style modules such as:
@@ -464,6 +472,31 @@ var client = PublishingPlatformClientBuilder.Create(new PublishingPlatformClient
 ```
 
 When non-idempotent retries are enabled, the SDK retries only safe transient statuses (`429`, `503`) and only when an `Idempotency-Key` is present with replayable request content.
+
+## Request-scoped options convenience overloads
+
+For publishing, distribution, and webhook registration flows, the SDK exposes extension-based convenience overloads that accept `PublishingPlatformRequestOptions`.
+
+```csharp
+using PublishingPlatform.SDK.Extensions;
+using PublishingPlatform.SDK.Options;
+
+var requestOptions = new PublishingPlatformRequestOptions
+{
+    IdempotencyKey = "publish-book-123-v1",
+};
+
+var status = await client.BookPublishing.PublishAsync(
+    "book-123",
+    new PublishBookRequest { Notes = "release-ready" },
+    requestOptions);
+```
+
+Current extension overloads map request-scoped idempotency and correlation to request headers while preserving current contracts.
+Correlation precedence is deterministic:
+- explicit request header `X-Correlation-Id` wins,
+- otherwise `PublishingPlatformRequestOptions.CorrelationId` is used when present,
+- otherwise SDK transport keeps current correlation generation behavior.
 
 ## ASP.NET Core registration (Options pattern)
 

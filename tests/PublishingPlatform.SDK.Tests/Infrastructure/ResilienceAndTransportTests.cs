@@ -82,6 +82,58 @@ public sealed class ResilienceAndTransportTests
     }
 
     [Fact]
+    public async Task SendAsync_UsesRequestScopedCorrelationOverride_WhenHeaderMissing()
+    {
+        var correlationProvider = new FixedCorrelationIdProvider("generated-correlation");
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            correlationProvider,
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions(),
+            });
+
+        using (RequestScopedCorrelationContext.Push("request-scope-correlation"))
+        {
+            await transport.SendAsync(HttpMethod.Get, "/books", null, null, "Books.GetById", CancellationToken.None, "Books");
+        }
+
+        handler.LastRequest!.Headers.TryGetValues(SharedHttpTransport.CorrelationHeaderName, out var values).Should().BeTrue();
+        values.Should().ContainSingle().Which.Should().Be("request-scope-correlation");
+        correlationProvider.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SendAsync_PrefersExplicitHeader_OverRequestScopedCorrelationOverride()
+    {
+        var correlationProvider = new FixedCorrelationIdProvider("generated-correlation");
+        using var handler = new RecordingHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.test") };
+        var transport = CreateDiagnosticsTransport(
+            httpClient,
+            correlationProvider,
+            new PublishingPlatformClientOptions
+            {
+                Diagnostics = new DiagnosticsOptions(),
+            });
+        var headers = new Dictionary<string, string>
+        {
+            [SharedHttpTransport.CorrelationHeaderName] = "caller-correlation",
+        };
+
+        using (RequestScopedCorrelationContext.Push("request-scope-correlation"))
+        {
+            await transport.SendAsync(HttpMethod.Get, "/books", null, headers, "Books.GetById", CancellationToken.None, "Books");
+        }
+
+        handler.LastRequest!.Headers.TryGetValues(SharedHttpTransport.CorrelationHeaderName, out var values).Should().BeTrue();
+        values.Should().ContainSingle().Which.Should().Be("caller-correlation");
+        correlationProvider.CallCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task SendAsync_UsesCustomCorrelationHeaderName()
     {
         const string headerName = "X-Trace-Id";

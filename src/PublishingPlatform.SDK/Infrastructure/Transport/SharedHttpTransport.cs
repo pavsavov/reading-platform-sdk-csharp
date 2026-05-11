@@ -213,6 +213,12 @@ internal sealed class SharedHttpTransport : ISharedHttpTransport
             }
         }
 
+        var requestScopedCorrelationId = RequestScopedCorrelationContext.CurrentCorrelationId;
+        if (!string.IsNullOrWhiteSpace(requestScopedCorrelationId))
+        {
+            return requestScopedCorrelationId;
+        }
+
         return options.GenerateCorrelationIds ? _correlationIdProvider.Create() : null;
     }
 
